@@ -32,7 +32,11 @@ class HistoryViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
-    fun logRecentActivityClicked() {
-        analyticsHelper.logRecentActivityClicked()
+    fun logRecentActivityClicked() = analyticsHelper.logRecentActivityClicked()
+    fun logScreenView() = analyticsHelper.logScreenView("stats")
+    fun logTabDwellTime(seconds: Long) = analyticsHelper.logTabDwellTime("stats", seconds)
+    fun logStatsPeriodChanged(periodIndex: Int) {
+        val period = when (periodIndex) { 0 -> "weekly"; 1 -> "monthly"; else -> "yearly" }
+        analyticsHelper.logStatsPeriodChanged(period)
     }
 }

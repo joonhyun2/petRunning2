@@ -141,13 +141,12 @@ private fun ResultScreenContent(
             distanceKm = uiState.distanceKm,
             elapsedSeconds = uiState.elapsedSeconds,
             paceSecPerKm = uiState.paceSecPerKm,
-            calories = uiState.calories,
         )
 
         Spacer(modifier = Modifier.height(22.dp))
 
         // ── Map Card ──
-        MapCard(routePoints = uiState.routePoints)
+        MapCard(routePoints = uiState.routePoints, locationLabel = uiState.locationLabel)
 
         Spacer(modifier = Modifier.height(48.dp))
 
@@ -189,7 +188,6 @@ private fun SummaryCard(
     distanceKm: Double,
     elapsedSeconds: Long,
     paceSecPerKm: Long,
-    calories: Int,
 ) {
     val dateStr = SimpleDateFormat("yyyy.MM.dd(E)", Locale.KOREAN).format(Date())
 
@@ -207,7 +205,7 @@ private fun SummaryCard(
             .padding(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // 날짜 (h1)
+        // 날짜
         Text(
             text = dateStr,
             style = AppTextStyle.titleMd.copy(fontWeight = FontWeight.Bold),
@@ -252,7 +250,7 @@ private fun SummaryCard(
             )
         }
 
-        // 요약 행: 뛴 시간 · 평균 페이스 · 칼로리
+        // 요약 행: 뛴 시간 · 평균 페이스
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center,
@@ -261,8 +259,6 @@ private fun SummaryCard(
             SummaryMetric(value = formatTime(elapsedSeconds), label = "뛴 시간")
             DotSeparator()
             SummaryMetric(value = formatPace(paceSecPerKm), label = "평균 페이스")
-            DotSeparator()
-            SummaryMetric(value = "$calories", label = "칼로리")
         }
     }
 }
@@ -297,7 +293,7 @@ private fun DotSeparator() {
 // ── Map Card ─────────────────────────────────────────────────────────────────
 
 @Composable
-private fun MapCard(routePoints: String) {
+private fun MapCard(routePoints: String, locationLabel: String = "") {
     // 경로 좌표 파싱
     val points = remember(routePoints) {
         if (routePoints.isBlank()) emptyList()
@@ -402,6 +398,29 @@ private fun MapCard(routePoints: String) {
                 )
             }
         }
+
+        // 위치 pill — 지도 오른쪽 위 코너 오버레이
+        if (locationLabel.isNotBlank()) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(12.dp)
+                    .background(
+                        Color.White.copy(alpha = 0.88f),
+                        CircleShape,
+                    )
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+            ) {
+                Text(
+                    text = locationLabel,
+                    style = AppTextStyle.bodySm.copy(
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.2.sp,
+                    ),
+                    color = ColorPrimary,
+                )
+            }
+        }
     }
 }
 
@@ -416,9 +435,9 @@ private fun EarnedGrid(earnedXp: Int, earnedCredit: Int) {
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         EarnedCard(
-            iconBg = ColorExpBg,
+            iconBg = null,
             iconColor = ColorExp,
-            iconText = "☆",
+            iconText = null,
             label = "획득 경험치",
             value = "+$earnedXp",
             unit = "경험치",
@@ -438,9 +457,9 @@ private fun EarnedGrid(earnedXp: Int, earnedCredit: Int) {
 
 @Composable
 private fun EarnedCard(
-    iconBg: Color,
+    iconBg: Color?,
     iconColor: Color,
-    iconText: String,
+    iconText: String?,
     label: String,
     value: String,
     unit: String,
@@ -458,26 +477,29 @@ private fun EarnedCard(
             .background(ColorSurface, RoundedCornerShape(20.dp))
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
     ) {
-        // 아이콘 원형
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .clip(CircleShape)
-                .background(iconBg),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = iconText,
-                style = AppTextStyle.bodyMd.copy(
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 16.sp,
-                ),
-                color = iconColor,
-            )
-        }
+        // 아이콘 원형 (iconText가 있을 때만 표시)
+        if (iconBg != null && iconText != null) {
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(iconBg),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = iconText,
+                    style = AppTextStyle.bodyMd.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 16.sp,
+                    ),
+                    color = iconColor,
+                )
+            }
 
-        Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(4.dp))
+        }
 
         Text(
             text = label,
@@ -680,7 +702,6 @@ private fun ResultScreenPreview() {
                 distanceKm = 3.82,
                 elapsedSeconds = 1456L,
                 paceSecPerKm = 380L,
-                calories = 372,
                 earnedXp = 48,
                 earnedCredit = 12,
             ),

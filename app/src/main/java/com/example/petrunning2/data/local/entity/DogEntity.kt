@@ -9,6 +9,6 @@ data class DogEntity(
     val name: String = "Pix",
     val level: Int = 1,
     val currentXp: Int = 0,
-    val maxXp: Int = 100,
+    val maxXp: Int = 30,
     val credit: Int = 100,
 )

@@ -1,14 +1,18 @@
 package com.example.petrunning2.ui.result
 
+import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.petrunning2.analytics.AnalyticsHelper
 import com.example.petrunning2.data.repository.DogRepository
+import com.example.petrunning2.util.LocationUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -21,13 +25,15 @@ data class ResultUiState(
     val earnedCredit: Int = 0,
     val isSaving: Boolean = false,
     val saved: Boolean = false,
-    val routePoints: String = "", // "lat,lng|lat,lng|..."
+    val routePoints: String = "",
+    val locationLabel: String = "",
 )
 
 @HiltViewModel
 class ResultViewModel @Inject constructor(
     private val dogRepository: DogRepository,
     private val analyticsHelper: AnalyticsHelper,
+    @ApplicationContext private val context: Context,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -37,10 +43,9 @@ class ResultViewModel @Inject constructor(
     private var hasSaved = false
 
     fun setRunData(distanceKm: Double, elapsedSeconds: Long, paceSecPerKm: Long, routePoints: String = "") {
-        val xp = (distanceKm * 10).toInt().coerceAtLeast(if (distanceKm > 0.0) 1 else 0)
-        val credit = (distanceKm * 20).toInt()
+        val xp = (distanceKm * 25).toInt().coerceAtLeast(if (distanceKm > 0.0) 1 else 0)
+        val credit = (distanceKm * 10).toInt()
         val calories = (distanceKm * 60 + elapsedSeconds * 0.05).toInt()
-        // 결과 화면에서는 전체 평균 페이스 (총 시간 ÷ 총 거리)
         val avgPace = if (distanceKm > 0.0) (elapsedSeconds / distanceKm).toLong() else paceSecPerKm
         _uiState.value = ResultUiState(
             distanceKm = distanceKm,
@@ -51,6 +56,14 @@ class ResultViewModel @Inject constructor(
             earnedCredit = credit,
             routePoints = routePoints,
         )
+        // 첫 번째 좌표로 위치 라벨 역지오코딩
+        val firstPoint = LocationUtils.parseFirstPoint(routePoints)
+        if (firstPoint != null) {
+            viewModelScope.launch {
+                val label = LocationUtils.resolveLocationLabel(context, firstPoint.first, firstPoint.second)
+                _uiState.value = _uiState.value.copy(locationLabel = label)
+            }
+        }
     }
 
     fun saveResult(onComplete: () -> Unit) {
@@ -77,6 +90,16 @@ class ResultViewModel @Inject constructor(
                 avgPaceSecPerKm = state.paceSecPerKm,
             )
             analyticsHelper.logResultSaved(state.distanceKm, state.elapsedSeconds)
+
+            // Retention 코호트용 user property 업데이트
+            val allRecords = dogRepository.getAllRecords().first()
+            val updatedDog = dogRepository.dog.first()
+            analyticsHelper.setUserProperties(
+                totalRuns = allRecords.size,
+                totalDistanceKm = allRecords.sumOf { it.distanceKm },
+                petLevel = updatedDog.level,
+            )
+
             _uiState.value = _uiState.value.copy(isSaving = false, saved = true)
             onComplete()
         }

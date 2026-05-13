@@ -38,7 +38,7 @@ class DogRepository @Inject constructor(
         while (xp >= maxXp) {
             xp -= maxXp
             level++
-            maxXp = level * 100
+            maxXp = 30 + (level - 1) * 5
         }
 
         dogDao.saveDog(current.copy(currentXp = xp, level = level, maxXp = maxXp))

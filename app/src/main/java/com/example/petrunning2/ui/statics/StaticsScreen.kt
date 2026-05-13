@@ -27,6 +27,8 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -73,6 +75,12 @@ fun StaticsScreen(
     onNavigateToRecordDetail: ((distanceKm: Double, elapsedSeconds: Long, paceSecPerKm: Long, routePoints: String) -> Unit)? = null,
     viewModel: HistoryViewModel = hiltViewModel(),
 ) {
+    LaunchedEffect(Unit) { viewModel.logScreenView() }
+    DisposableEffect(Unit) {
+        val enterTime = System.currentTimeMillis()
+        onDispose { viewModel.logTabDwellTime((System.currentTimeMillis() - enterTime) / 1000) }
+    }
+
     val records by viewModel.records.collectAsState()
     var selectedPeriod by remember { mutableIntStateOf(0) }
 
@@ -93,7 +101,10 @@ fun StaticsScreen(
     StaticsScreenContent(
         records = records,
         selectedPeriod = selectedPeriod,
-        onPeriodSelected = { selectedPeriod = it },
+        onPeriodSelected = {
+            selectedPeriod = it
+            viewModel.logStatsPeriodChanged(it)
+        },
         weeklyYear = weeklyYear,
         weeklyMonth = weeklyMonth,
         weeklyWeekOfMonth = weeklyWeekOfMonth,
@@ -674,7 +685,7 @@ private fun RecentActivityCard(
 
         Spacer(modifier = Modifier.width(12.dp))
 
-        // 오른쪽: 날짜 + 거리/시간/코인
+        // 오른쪽: 날짜 + 위치 + 거리/시간/코인
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -782,7 +793,11 @@ private fun computeBarData(
                 cal.get(Calendar.YEAR) == monthlyYear && cal.get(Calendar.MONTH) == monthlyMonth
             }.forEach { record ->
                 cal.timeInMillis = record.timestamp
-                val week = cal.get(Calendar.WEEK_OF_MONTH).coerceIn(1, maxWeeks)
+                val week = weekOfMonth(
+                    cal.get(Calendar.YEAR),
+                    cal.get(Calendar.MONTH),
+                    cal.get(Calendar.DAY_OF_MONTH),
+                ).coerceIn(1, maxWeeks)
                 result[week - 1] += record.distanceKm.toFloat()
             }
             result
@@ -820,9 +835,10 @@ private fun computeBarFilteredRecords(
         }
         1 -> records.filter { record ->
             cal.timeInMillis = record.timestamp
-            cal.get(Calendar.YEAR) == monthlyYear &&
-                    cal.get(Calendar.MONTH) == monthlyMonth &&
-                    cal.get(Calendar.WEEK_OF_MONTH) == barIndex + 1
+            val y = cal.get(Calendar.YEAR)
+            val m = cal.get(Calendar.MONTH)
+            val d = cal.get(Calendar.DAY_OF_MONTH)
+            y == monthlyYear && m == monthlyMonth && weekOfMonth(y, m, d) == barIndex + 1
         }
         2 -> records.filter { record ->
             cal.timeInMillis = record.timestamp
@@ -845,36 +861,33 @@ private fun getBarLabels(period: Int, monthlyYear: Int, monthlyMonth: Int): List
     }
 }
 
-// 해당 월에 월요일이 몇 번 있는지 = 주차 수
-// (주의 소속은 "그 주의 월요일이 속한 달"로 정의)
+// 일요일 시작 기준 (일=0, 월=1, ... 토=6) — 한국 달력 표준
+private fun firstDayOffset(year: Int, month: Int): Int {
+    val cal = Calendar.getInstance()
+    cal.set(year, month, 1)
+    return cal.get(Calendar.DAY_OF_WEEK) - Calendar.SUNDAY  // 0~6
+}
+
+private fun weekOfMonth(year: Int, month: Int, dayOfMonth: Int): Int {
+    val offset = firstDayOffset(year, month)
+    return (dayOfMonth + offset - 1) / 7 + 1
+}
+
 private fun getWeeksInMonth(year: Int, month: Int): Int {
     val cal = Calendar.getInstance()
     cal.set(year, month, 1)
     val daysInMonth = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
-    var count = 0
-    for (day in 1..daysInMonth) {
-        cal.set(Calendar.DAY_OF_MONTH, day)
-        if (cal.get(Calendar.DAY_OF_WEEK) == Calendar.MONDAY) count++
-    }
-    return count
+    val offset = firstDayOffset(year, month)
+    return (daysInMonth + offset - 1) / 7 + 1
 }
 
-// 타임스탬프 → (year, month, weekIndex): 해당 주의 월요일 기준으로 연/월/주차 반환
+// 타임스탬프 → (year, month, weekIndex)
 private fun getWeekIndexInMonth(timeMillis: Long): Triple<Int, Int, Int> {
     val cal = Calendar.getInstance().apply { timeInMillis = timeMillis }
-    val daysBack = (cal.get(Calendar.DAY_OF_WEEK) - Calendar.MONDAY + 7) % 7
-    cal.add(Calendar.DAY_OF_MONTH, -daysBack) // 해당 주의 월요일로 이동
-    val mondayYear = cal.get(Calendar.YEAR)
-    val mondayMonth = cal.get(Calendar.MONTH)
-    val mondayDay = cal.get(Calendar.DAY_OF_MONTH)
-    val temp = Calendar.getInstance()
-    temp.set(mondayYear, mondayMonth, 1)
-    var weekIndex = 0
-    for (d in 1..mondayDay) {
-        temp.set(Calendar.DAY_OF_MONTH, d)
-        if (temp.get(Calendar.DAY_OF_WEEK) == Calendar.MONDAY) weekIndex++
-    }
-    return Triple(mondayYear, mondayMonth, weekIndex)
+    val year = cal.get(Calendar.YEAR)
+    val month = cal.get(Calendar.MONTH)
+    val day = cal.get(Calendar.DAY_OF_MONTH)
+    return Triple(year, month, weekOfMonth(year, month, day))
 }
 
 private fun formatTime(totalSeconds: Long): String {

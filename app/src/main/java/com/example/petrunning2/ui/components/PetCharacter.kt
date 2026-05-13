@@ -1,5 +1,6 @@
 package com.example.petrunning2.ui.components
 
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
@@ -17,7 +18,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import coil.ImageLoader
+import coil.request.ImageRequest
+import coil.request.SuccessResult
 import com.example.petrunning2.R
+import com.example.petrunning2.ui.decoration.ClothItem
 import com.example.petrunning2.ui.decoration.CLOTHES_CATALOG
 import com.example.petrunning2.ui.decoration.ItemCategory
 import kotlinx.coroutines.delay
@@ -26,7 +31,6 @@ import kotlinx.coroutines.delay
 private const val FRAME_COUNT = 4
 private const val FRAME_DELAY_MS = 150L
 
-// 각 프레임에서 캐릭터 머리가 움직이는 만큼 아이템도 따라가도록 하는 오프셋 (sizePx 비율)
 private val ITEM_DY = floatArrayOf(0.00f, 0.025f, 0.00f, -0.015f)
 private val ITEM_DX = floatArrayOf(0.00f, 0.005f, 0.00f, -0.005f)
 
@@ -34,33 +38,66 @@ private val ITEM_DX = floatArrayOf(0.00f, 0.005f, 0.00f, -0.005f)
 fun PetCharacter(
     modifier: Modifier = Modifier,
     size: Dp = 114.dp,
+    spriteUrl: String? = null,
     equippedItemId: Int? = null,
     equippedItemIds: List<Int> = emptyList(),
     isAnimating: Boolean = true,
+    catalog: List<ClothItem> = CLOTHES_CATALOG,
 ) {
-    // 단일 ID 또는 복수 ID 모두 지원
     val allEquippedIds = (equippedItemIds + listOfNotNull(equippedItemId)).distinct()
-
-    val equippedItems = allEquippedIds.mapNotNull { id ->
-        CLOTHES_CATALOG.find { it.id == id }
-    }
+    val equippedItems = allEquippedIds.mapNotNull { id -> catalog.find { it.id == id } }
 
     val context = LocalContext.current
     val density = LocalDensity.current
+    val imageLoader = remember { ImageLoader(context) }
 
-    val spriteSheet = remember {
+    // 로컬 리소스를 기본값으로 사용, URL 로드 성공 시 교체
+    val localSprite = remember {
         BitmapFactory.decodeResource(context.resources, R.drawable.pet_idle)
     }
-    val frameW = spriteSheet.width / 2
-    val frameH = spriteSheet.height / 2
+    var spriteSheet by remember { mutableStateOf(localSprite) }
 
-    // 모든 장착 아이템 비트맵 로드
-    val itemBitmaps = remember(allEquippedIds) {
-        equippedItems.mapNotNull { item ->
-            item.drawableRes?.let { res ->
-                item to BitmapFactory.decodeResource(context.resources, res)
-            }
+    LaunchedEffect(spriteUrl) {
+        if (!spriteUrl.isNullOrBlank()) {
+            try {
+                val request = ImageRequest.Builder(context)
+                    .data(spriteUrl)
+                    .allowHardware(false)
+                    .build()
+                val result = imageLoader.execute(request)
+                if (result is SuccessResult) {
+                    (result.drawable as? android.graphics.drawable.BitmapDrawable)
+                        ?.bitmap
+                        ?.let { spriteSheet = it }
+                }
+            } catch (_: Exception) { }
         }
+    }
+
+    // 장착 아이템 비트맵 로드
+    var itemBitmaps by remember { mutableStateOf<List<Pair<ClothItem, Bitmap>>>(emptyList()) }
+
+    LaunchedEffect(allEquippedIds, catalog) {
+        val loaded = equippedItems.mapNotNull { item ->
+            val bitmap = when {
+                item.imageUrl.isNotBlank() -> {
+                    try {
+                        val request = ImageRequest.Builder(context)
+                            .data(item.imageUrl)
+                            .allowHardware(false)
+                            .build()
+                        val result = imageLoader.execute(request)
+                        if (result is SuccessResult) {
+                            (result.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
+                        } else null
+                    } catch (_: Exception) { null }
+                }
+                item.drawableRes != 0 -> BitmapFactory.decodeResource(context.resources, item.drawableRes)
+                else -> null
+            }
+            bitmap?.let { item to it }
+        }
+        itemBitmaps = loaded
     }
 
     var frameIndex by remember { mutableStateOf(0) }
@@ -77,9 +114,12 @@ fun PetCharacter(
     val sizePx = with(density) { size.toPx().toInt() }
 
     Canvas(modifier = modifier.size(size)) {
-        // 1) 캐릭터 스프라이트
+        val frameW = spriteSheet.width / 2
+        val frameH = spriteSheet.height / 2
         val col = frameIndex % 2
         val row = frameIndex / 2
+
+        // 1) 캐릭터 스프라이트
         drawImage(
             image = spriteSheet.asImageBitmap(),
             srcOffset = IntOffset(col * frameW, row * frameH),
@@ -88,7 +128,7 @@ fun PetCharacter(
             dstSize = IntSize(sizePx, sizePx),
         )
 
-        // 2) 모든 장착 아이템을 순서대로 오버레이
+        // 2) 장착 아이템 오버레이
         val dx = (sizePx * ITEM_DX[frameIndex]).toInt()
         val dy = (sizePx * ITEM_DY[frameIndex]).toInt()
         itemBitmaps.forEach { (item, bitmap) ->

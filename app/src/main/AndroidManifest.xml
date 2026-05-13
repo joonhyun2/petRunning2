@@ -20,7 +20,7 @@
 
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyBr9DdF_ixGrv6Eygsk7sr0IXt0Whs8afM" />
+            android:value="${MAPS_API_KEY}" />
 
         <activity
             android:name=".MainActivity"
@@ -39,6 +39,17 @@
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".widget.RunWidget"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_run_info"/>
         </receiver>
 
     </application>

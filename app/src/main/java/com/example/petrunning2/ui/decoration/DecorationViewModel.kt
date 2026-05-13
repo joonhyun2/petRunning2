@@ -29,15 +29,15 @@ enum class ItemCategory { FACE, HAIR, CLOTH, THEME }
 
 internal val CLOTHES_CATALOG = listOf(
     // 얼굴 — 캐릭터에 오버레이
-    ClothItem(id = 100, drawableRes = R.drawable.face_1, price = 5, name = "돼지코", category = ItemCategory.FACE, isOverlay = true),
+    ClothItem(id = 100, drawableRes = R.drawable.face_1, price = 30, name = "돼지코", category = ItemCategory.FACE, isOverlay = true),
     // 헤어 — ribbon만 단독 소품, 나머지는 캐릭터 오버레이
-    ClothItem(id = 1,   drawableRes = R.drawable.ribbon, price = 5, name = "리본",  category = ItemCategory.HAIR, isOverlay = false),
-    ClothItem(id = 201, drawableRes = R.drawable.hair_1, price = 5, name = "헤어1", category = ItemCategory.HAIR, isOverlay = true),
-    ClothItem(id = 202, drawableRes = R.drawable.hair_2, price = 5, name = "헤어2", category = ItemCategory.HAIR, isOverlay = true),
-    ClothItem(id = 203, drawableRes = R.drawable.hair_3, price = 5, name = "헤어3", category = ItemCategory.HAIR, isOverlay = true),
-    ClothItem(id = 205, drawableRes = R.drawable.hair_5, price = 5, name = "헤어5", category = ItemCategory.HAIR, isOverlay = true),
+    ClothItem(id = 1,   drawableRes = R.drawable.ribbon, price = 35, name = "리본",  category = ItemCategory.HAIR, isOverlay = false),
+    ClothItem(id = 201, drawableRes = R.drawable.hair_1, price = 40, name = "헤어1", category = ItemCategory.HAIR, isOverlay = true),
+    ClothItem(id = 202, drawableRes = R.drawable.hair_2, price = 55, name = "헤어2", category = ItemCategory.HAIR, isOverlay = true),
+    ClothItem(id = 203, drawableRes = R.drawable.hair_3, price = 65, name = "헤어3", category = ItemCategory.HAIR, isOverlay = true),
+    ClothItem(id = 205, drawableRes = R.drawable.hair_5, price = 80, name = "헤어5", category = ItemCategory.HAIR, isOverlay = true),
     // 옷 — 눈 아래 개별 배치
-    ClothItem(id = 300, drawableRes = R.drawable.cloth_1, price = 5, name = "넥타이", category = ItemCategory.CLOTH, isOverlay = false),
+    ClothItem(id = 300, drawableRes = R.drawable.cloth_1, price = 120, name = "넥타이", category = ItemCategory.CLOTH, isOverlay = false),
 )
 
 @HiltViewModel
@@ -49,11 +49,16 @@ class DecorationViewModel @Inject constructor(
 ) : ViewModel() {
 
     init {
-        // 앱 시작 시 Firestore에서 카탈로그 가져오기
-        viewModelScope.launch {
-            catalogRepository.fetchCatalog()
-        }
+        viewModelScope.launch { catalogRepository.fetchCatalog() }
+        viewModelScope.launch { catalogRepository.fetchCharacterSpriteUrl() }
     }
+
+    val characterSpriteUrl: StateFlow<String?> = catalogRepository.characterSpriteUrl
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = null,
+        )
 
     // Firestore 카탈로그 (서버 데이터 있으면 사용, 없으면 로컬 fallback)
     val catalog: StateFlow<List<ClothItem>> = catalogRepository.items
@@ -74,21 +79,25 @@ class DecorationViewModel @Inject constructor(
             initialValue = 100,
         )
 
-    val ownedItems: StateFlow<List<ClothItem>> = itemRepository.ownedItemIds
-        .map { ids -> CLOTHES_CATALOG.filter { it.id in ids } }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList(),
-        )
+    val ownedItems: StateFlow<List<ClothItem>> = kotlinx.coroutines.flow.combine(
+        catalog, itemRepository.ownedItemIds
+    ) { catalogItems, ids ->
+        catalogItems.filter { it.id in ids }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList(),
+    )
 
-    val unownedItems: StateFlow<List<ClothItem>> = itemRepository.ownedItemIds
-        .map { ids -> CLOTHES_CATALOG.filter { it.id !in ids } }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = CLOTHES_CATALOG,
-        )
+    val unownedItems: StateFlow<List<ClothItem>> = kotlinx.coroutines.flow.combine(
+        catalog, itemRepository.ownedItemIds
+    ) { catalogItems, ids ->
+        catalogItems.filter { it.id !in ids }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = CLOTHES_CATALOG,
+    )
 
     val equippedItemId: StateFlow<Int?> = itemRepository.equippedItemId
         .stateIn(
@@ -109,8 +118,9 @@ class DecorationViewModel @Inject constructor(
             val success = dogRepository.spendCredit(price)
             if (success) {
                 itemRepository.purchaseItem(itemId)
-                val category = CLOTHES_CATALOG.find { it.id == itemId }?.category
-                val itemName = CLOTHES_CATALOG.find { it.id == itemId }?.name ?: "unknown"
+                val currentCatalog = catalog.value
+                val category = currentCatalog.find { it.id == itemId }?.category
+                val itemName = currentCatalog.find { it.id == itemId }?.name ?: "unknown"
                 if (category != null) {
                     itemRepository.equipItem(itemId, category)
                     analyticsHelper.logItemPurchased(itemId, itemName, price, category.name.lowercase())
@@ -122,8 +132,9 @@ class DecorationViewModel @Inject constructor(
 
     fun equipItem(itemId: Int) {
         viewModelScope.launch {
-            val category = CLOTHES_CATALOG.find { it.id == itemId }?.category
-            val itemName = CLOTHES_CATALOG.find { it.id == itemId }?.name ?: "unknown"
+            val currentCatalog = catalog.value
+            val category = currentCatalog.find { it.id == itemId }?.category
+            val itemName = currentCatalog.find { it.id == itemId }?.name ?: "unknown"
             if (category != null) {
                 itemRepository.equipItem(itemId, category)
                 analyticsHelper.logItemEquipped(itemId, itemName, category.name.lowercase())
@@ -146,6 +157,11 @@ class DecorationViewModel @Inject constructor(
     }
 
     // ── Analytics 전용 이벤트 ────────────────────────────────────────────────
+
+    fun logScreenView() = analyticsHelper.logScreenView("decoration")
+    fun logTabDwellTime(seconds: Long) = analyticsHelper.logTabDwellTime("decoration", seconds)
+    fun logItemViewed(itemId: Int, itemName: String, isLocked: Boolean) =
+        analyticsHelper.logItemViewed(itemId, itemName, isLocked)
 
     fun logCategoryTabClicked(tabIndex: Int) {
         val category = when (tabIndex) {

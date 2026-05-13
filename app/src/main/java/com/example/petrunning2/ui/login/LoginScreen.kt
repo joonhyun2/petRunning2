@@ -118,13 +118,7 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 안내 텍스트
-            Text(
-                text = "로그인 없이 바로 시작할 수 있어요",
-                style = AppTextStyle.bodySm,
-                color = ColorTextSecondary,
-                textAlign = TextAlign.Center,
-            )
+
         }
     }
 }

@@ -45,7 +45,7 @@ class LocationDataSource @Inject constructor(
     }
 
     companion object {
-        private const val INTERVAL_MS = 3_000L      // 3초마다 위치 업데이트
-        private const val MIN_INTERVAL_MS = 1_500L  // 최소 1.5초 간격
+        private const val INTERVAL_MS = 1_000L      // 1초마다 위치 업데이트 (NRC 수준)
+        private const val MIN_INTERVAL_MS = 500L    // 최소 0.5초 간격
     }
 }

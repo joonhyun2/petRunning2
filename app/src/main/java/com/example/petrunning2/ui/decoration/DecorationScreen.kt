@@ -33,6 +33,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -74,6 +75,8 @@ import com.example.petrunning2.ui.theme.ColorSurface
 import com.example.petrunning2.ui.theme.ColorSurfaceSoft
 import com.example.petrunning2.ui.theme.ColorTextDisabled
 import com.example.petrunning2.ui.theme.ColorTextPrimary
+import coil.compose.AsyncImage
+import com.example.petrunning2.ui.decoration.ClothItem as ClothItemData
 import com.example.petrunning2.ui.theme.PetRunning2Theme
 
 data class DecorationItem(
@@ -81,6 +84,7 @@ data class DecorationItem(
     val isLocked: Boolean = false,
     val price: Int? = null,
     val drawableRes: Int? = null,
+    val imageUrl: String = "",
 )
 
 private val tabs = listOf("얼굴", "헤어", "옷", "테마")
@@ -92,10 +96,18 @@ fun DecorationScreen(
     onNavigateToProfile: () -> Unit,
     viewModel: DecorationViewModel = hiltViewModel(),
 ) {
+    LaunchedEffect(Unit) { viewModel.logScreenView() }
+    DisposableEffect(Unit) {
+        val enterTime = System.currentTimeMillis()
+        onDispose { viewModel.logTabDwellTime((System.currentTimeMillis() - enterTime) / 1000) }
+    }
+
     val credit by viewModel.credit.collectAsState()
     val ownedItems by viewModel.ownedItems.collectAsState()
     val unownedItems by viewModel.unownedItems.collectAsState()
     val equippedItemIds by viewModel.equippedItemIds.collectAsState()
+    val catalog by viewModel.catalog.collectAsState()
+    val characterSpriteUrl by viewModel.characterSpriteUrl.collectAsState()
 
     var selectedTab by remember { mutableIntStateOf(0) }
     var selectedItemId by remember { mutableIntStateOf(-1) }
@@ -105,7 +117,7 @@ fun DecorationScreen(
         0 -> ItemCategory.FACE; 1 -> ItemCategory.HAIR; 2 -> ItemCategory.CLOTH; else -> ItemCategory.THEME
     }
     val equippedInCurrentTab = equippedItemIds.firstOrNull { id ->
-        CLOTHES_CATALOG.find { it.id == id }?.category == currentTabCategory
+        catalog.find { it.id == id }?.category == currentTabCategory
     }
 
     // 탭 전환 시 해당 탭의 장착 아이템으로 자동 동기화
@@ -125,7 +137,7 @@ fun DecorationScreen(
     }
 
     // 현재 탭의 카탈로그 아이템
-    val tabCatalogItems = CLOTHES_CATALOG.filter { it.category == tabCategory }
+    val tabCatalogItems = catalog.filter { it.category == tabCategory }
 
     // 현재 탭 아이템을 DecorationItem으로 변환 (소유 여부 반영)
     val currentItems = tabCatalogItems.map { item ->
@@ -135,6 +147,7 @@ fun DecorationScreen(
             isLocked = !isOwned,
             price = if (!isOwned) item.price else null,
             drawableRes = item.drawableRes,
+            imageUrl = item.imageUrl,
         )
     }
 
@@ -155,11 +168,11 @@ fun DecorationScreen(
 
     // 캐릭터 프리뷰: 현재 탭 카테고리는 previewItemId로, 나머지 카테고리는 equippedItemIds 그대로
     val previewItemIds = equippedItemIds.filter { id ->
-        CLOTHES_CATALOG.find { it.id == id }?.category != currentTabCategory
+        catalog.find { it.id == id }?.category != currentTabCategory
     } + listOfNotNull(previewItemId)
 
     // 다이얼로그에 표시할 ClothItem 정보
-    val selectedClothItem = CLOTHES_CATALOG.find { it.id == selectedItemId }
+    val selectedClothItem = catalog.find { it.id == selectedItemId }
 
     Box(
         modifier = Modifier
@@ -192,6 +205,8 @@ fun DecorationScreen(
             // ── 캐릭터 프리뷰 ── (모든 카테고리 장착 아이템 표시)
             CharacterPreview(
                 equippedItemIds = previewItemIds,
+                catalog = catalog,
+                characterSpriteUrl = characterSpriteUrl,
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -207,7 +222,7 @@ fun DecorationScreen(
                         0 -> ItemCategory.FACE; 1 -> ItemCategory.HAIR; 2 -> ItemCategory.CLOTH; else -> ItemCategory.THEME
                     }
                     selectedItemId = equippedItemIds.firstOrNull { id ->
-                        CLOTHES_CATALOG.find { it.id == id }?.category == newCategory
+                        catalog.find { it.id == id }?.category == newCategory
                     } ?: -1
                 },
                 currentItems = currentItems,
@@ -215,6 +230,9 @@ fun DecorationScreen(
                 equippedItemId = equippedInCurrentTab,
                 onItemSelected = { id ->
                     selectedItemId = id
+                    val item = catalog.find { it.id == id }
+                    val isLocked = currentItems.find { it.id == id }?.isLocked ?: true
+                    if (item != null) viewModel.logItemViewed(id, item.name, isLocked)
                 },
                 onReset = {
                     selectedItemId = -1
@@ -253,6 +271,7 @@ fun DecorationScreen(
         PurchaseConfirmDialog(
             itemName = selectedClothItem.name,
             itemDrawableRes = selectedClothItem.drawableRes,
+            itemImageUrl = selectedClothItem.imageUrl,
             onConfirm = {
                 showPurchaseDialog = false
                 viewModel.purchaseItem(selectedClothItem.id, selectedClothItem.price) { success ->
@@ -271,6 +290,7 @@ fun DecorationScreen(
     if (showSuccessDialog && selectedClothItem != null) {
         PurchaseSuccessDialog(
             itemDrawableRes = selectedClothItem.drawableRes,
+            itemImageUrl = selectedClothItem.imageUrl,
             onConfirm = {
                 showSuccessDialog = false
                 // 탭 유지, 선택만 해제
@@ -311,7 +331,7 @@ private fun CoinDisplay(credit: Int) {
 // ── 캐릭터 프리뷰 ─────────────────────────────────────────────────────────────
 
 @Composable
-private fun CharacterPreview(equippedItemId: Int? = null, equippedItemIds: List<Int> = emptyList()) {
+private fun CharacterPreview(equippedItemId: Int? = null, equippedItemIds: List<Int> = emptyList(), catalog: List<ClothItemData> = CLOTHES_CATALOG, characterSpriteUrl: String? = null) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -323,8 +343,10 @@ private fun CharacterPreview(equippedItemId: Int? = null, equippedItemIds: List<
     ) {
         com.example.petrunning2.ui.components.PetCharacter(
             size = 114.dp,
+            spriteUrl = characterSpriteUrl,
             equippedItemId = equippedItemId,
             equippedItemIds = equippedItemIds,
+            catalog = catalog,
         )
     }
 }
@@ -499,7 +521,16 @@ private fun DecorationItemCell(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        if (item.drawableRes != null) {
+        if (item.imageUrl.isNotBlank()) {
+            AsyncImage(
+                model = item.imageUrl,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(52.dp)
+                    .align(Alignment.Center),
+                contentScale = ContentScale.Fit,
+            )
+        } else if (item.drawableRes != null && item.drawableRes != 0) {
             Image(
                 painter = painterResource(item.drawableRes),
                 contentDescription = null,
@@ -638,15 +669,11 @@ private fun DecorationActions(
             colors = ButtonDefaults.outlinedButtonColors(containerColor = ColorSurface, contentColor = ColorPrimaryChart),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Canvas(modifier = Modifier.size(16.dp)) {
-                    drawArc(color = ColorPrimaryChart, startAngle = -90f, sweepAngle = 270f, useCenter = false, style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round))
-                    val arrowPath = androidx.compose.ui.graphics.Path().apply {
-                        moveTo(size.width * 0.35f, 0f)
-                        lineTo(size.width * 0.5f, size.height * 0.15f)
-                        lineTo(size.width * 0.65f, 0f)
-                    }
-                    drawPath(arrowPath, color = ColorPrimaryChart, style = Stroke(2.dp.toPx(), cap = StrokeCap.Round))
-                }
+                Image(
+                    painter = painterResource(id = R.drawable.recycle_logo),
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
                 Text(text = "초기화", style = AppTextStyle.bodyMd.copy(fontWeight = FontWeight.Bold), maxLines = 1)
             }
         }
@@ -660,14 +687,11 @@ private fun DecorationActions(
             colors = ButtonDefaults.buttonColors(containerColor = ColorPrimaryChart, contentColor = ColorSurface),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Canvas(modifier = Modifier.size(width = 8.dp, height = 12.dp)) {
-                    val path = androidx.compose.ui.graphics.Path().apply {
-                        moveTo(0f, size.height * 0.5f)
-                        lineTo(size.width * 0.4f, size.height)
-                        lineTo(size.width, 0f)
-                    }
-                    drawPath(path, color = ColorSurface, style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round))
-                }
+                Image(
+                    painter = painterResource(id = R.drawable.check_logo),
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
                 Text(
                     text = buttonText,
                     style = AppTextStyle.bodyMd.copy(fontWeight = FontWeight.Bold),
@@ -684,6 +708,7 @@ private fun DecorationActions(
 private fun PurchaseConfirmDialog(
     itemName: String,
     itemDrawableRes: Int,
+    itemImageUrl: String = "",
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -705,12 +730,21 @@ private fun PurchaseConfirmDialog(
                     color = ColorTextPrimary,
                     textAlign = TextAlign.Center,
                 )
-                Image(
-                    painter = painterResource(itemDrawableRes),
-                    contentDescription = null,
-                    modifier = Modifier.size(150.dp),
-                    contentScale = ContentScale.Fit,
-                )
+                if (itemImageUrl.isNotBlank()) {
+                    AsyncImage(
+                        model = itemImageUrl,
+                        contentDescription = null,
+                        modifier = Modifier.size(150.dp),
+                        contentScale = ContentScale.Fit,
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(itemDrawableRes),
+                        contentDescription = null,
+                        modifier = Modifier.size(150.dp),
+                        contentScale = ContentScale.Fit,
+                    )
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
 
                     Button(
@@ -741,6 +775,7 @@ private fun PurchaseConfirmDialog(
 @Composable
 private fun PurchaseSuccessDialog(
     itemDrawableRes: Int,
+    itemImageUrl: String = "",
     onConfirm: () -> Unit,
 ) {
     Dialog(
@@ -764,12 +799,21 @@ private fun PurchaseSuccessDialog(
                     color = ColorTextPrimary,
                     textAlign = TextAlign.Center,
                 )
-                Image(
-                    painter = painterResource(itemDrawableRes),
-                    contentDescription = null,
-                    modifier = Modifier.size(150.dp),
-                    contentScale = ContentScale.Fit,
-                )
+                if (itemImageUrl.isNotBlank()) {
+                    AsyncImage(
+                        model = itemImageUrl,
+                        contentDescription = null,
+                        modifier = Modifier.size(150.dp),
+                        contentScale = ContentScale.Fit,
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(itemDrawableRes),
+                        contentDescription = null,
+                        modifier = Modifier.size(150.dp),
+                        contentScale = ContentScale.Fit,
+                    )
+                }
                 Button(
                     onClick = onConfirm,
                     modifier = Modifier.size(width = 108.dp, height = 47.dp),

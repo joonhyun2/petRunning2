@@ -42,7 +42,7 @@ class AnalyticsHelper @Inject constructor() {
             putDouble("distance_km", distanceKm)
             putLong("elapsed_seconds", elapsedSeconds)
             putLong("avg_pace_sec_per_km", avgPaceSecPerKm)
-            putLong("coins_earned", (distanceKm * 20).toLong())
+            putLong("coins_earned", (distanceKm * 10).toLong())
         })
     }
 
@@ -128,6 +128,17 @@ class AnalyticsHelper @Inject constructor() {
         analytics.logEvent(eventName, Bundle().apply {
             putLong("item_id", itemId.toLong())
             putString("item_name", itemName)
+        })
+    }
+
+    fun logHomeStartButtonTapped() {
+        analytics.logEvent("home_start_button_tapped", null)
+    }
+
+    fun logTabDwellTime(tabName: String, durationSeconds: Long) {
+        analytics.logEvent("tab_dwell_time", Bundle().apply {
+            putString("tab_name", tabName)
+            putLong("duration_seconds", durationSeconds)
         })
     }
 

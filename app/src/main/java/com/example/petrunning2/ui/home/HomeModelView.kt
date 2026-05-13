@@ -3,6 +3,8 @@ package com.example.petrunning2.ui.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.petrunning2.data.Dog
+import com.example.petrunning2.analytics.AnalyticsHelper
+import com.example.petrunning2.data.repository.CatalogRepository
 import com.example.petrunning2.data.repository.DogRepository
 import com.example.petrunning2.data.repository.ItemRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -10,6 +12,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class TodayStats(
@@ -22,7 +25,24 @@ data class TodayStats(
 class HomeViewModel @Inject constructor(
     dogRepository: DogRepository,
     itemRepository: ItemRepository,
+    private val catalogRepository: CatalogRepository,
+    private val analyticsHelper: AnalyticsHelper,
 ) : ViewModel() {
+
+    fun logScreenView() = analyticsHelper.logScreenView("home")
+    fun logStartButtonTapped() = analyticsHelper.logHomeStartButtonTapped()
+    fun logTabDwellTime(seconds: Long) = analyticsHelper.logTabDwellTime("home", seconds)
+
+    init {
+        viewModelScope.launch { catalogRepository.fetchCharacterSpriteUrl() }
+    }
+
+    val characterSpriteUrl: StateFlow<String?> = catalogRepository.characterSpriteUrl
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = null,
+        )
 
     val dog: StateFlow<Dog> = dogRepository.dog
         .stateIn(

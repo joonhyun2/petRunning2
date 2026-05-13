@@ -1,6 +1,5 @@
 package com.example.petrunning2.ui.home
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -31,6 +30,8 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -38,13 +39,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.example.petrunning2.ui.theme.PetRunning2Theme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -60,9 +55,7 @@ import com.example.petrunning2.ui.theme.ColorBg
 import com.example.petrunning2.ui.theme.ColorBorderSubtle
 import com.example.petrunning2.ui.theme.ColorCredit
 import com.example.petrunning2.ui.theme.ColorCreditBg
-import com.example.petrunning2.ui.theme.ColorLocation
 import com.example.petrunning2.ui.theme.ColorLocationBg
-import com.example.petrunning2.ui.theme.ColorPace
 import com.example.petrunning2.ui.theme.ColorPaceBg
 import com.example.petrunning2.ui.theme.ColorPrimaryLight
 import com.example.petrunning2.ui.theme.ColorSurface
@@ -78,16 +71,28 @@ fun HomeScreen(
     onNavigateToProfile: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
+
+    LaunchedEffect(Unit) { viewModel.logScreenView() }
+    DisposableEffect(Unit) {
+        val enterTime = System.currentTimeMillis()
+        onDispose { viewModel.logTabDwellTime((System.currentTimeMillis() - enterTime) / 1000) }
+    }
+
     val dog by viewModel.dog.collectAsState()
     val stats by viewModel.todayStats.collectAsState()
     val equippedItemId by viewModel.equippedItemId.collectAsState()
     val equippedItemIds by viewModel.equippedItemIds.collectAsState()
+    val characterSpriteUrl by viewModel.characterSpriteUrl.collectAsState()
     HomeScreenContent(
         dog = dog,
         stats = stats,
         equippedItemId = equippedItemId,
         equippedItemIds = equippedItemIds,
-        onNavigateToRunning = onNavigateToRunning,
+        characterSpriteUrl = characterSpriteUrl,
+        onNavigateToRunning = {
+            viewModel.logStartButtonTapped()
+            onNavigateToRunning()
+        },
         onNavigateToDecoration = onNavigateToDecoration,
         onNavigateToStats = onNavigateToStats,
         onNavigateToProfile = onNavigateToProfile,
@@ -100,6 +105,7 @@ private fun HomeScreenContent(
     stats: TodayStats,
     equippedItemId: Int?,
     equippedItemIds: List<Int> = emptyList(),
+    characterSpriteUrl: String? = null,
     onNavigateToRunning: () -> Unit,
     onNavigateToDecoration: () -> Unit,
     onNavigateToStats: () -> Unit,
@@ -144,6 +150,7 @@ private fun HomeScreenContent(
                 dog = dog,
                 equippedItemId = equippedItemId,
                 equippedItemIds = equippedItemIds,
+                characterSpriteUrl = characterSpriteUrl,
                 modifier = Modifier.weight(1f),
             )
 
@@ -156,6 +163,7 @@ private fun HomeScreenContent(
 
             // 달리기 시작 버튼
             HomeStartButton(onClick = onNavigateToRunning)
+
 
             Spacer(modifier = Modifier.height(8.dp))
         }
@@ -198,7 +206,7 @@ private fun CoinDisplay(credit: Int) {
 // ── Pet Growth Card ──────────────────────────────────────────────────────────
 
 @Composable
-private fun PetGrowthCard(dog: Dog, equippedItemId: Int?, equippedItemIds: List<Int> = emptyList(), modifier: Modifier = Modifier) {
+private fun PetGrowthCard(dog: Dog, equippedItemId: Int?, equippedItemIds: List<Int> = emptyList(), characterSpriteUrl: String? = null, modifier: Modifier = Modifier) {
     val progress = if (dog.maxXp > 0) dog.currentXp.toFloat() / dog.maxXp else 0f
 
     Column(
@@ -223,6 +231,7 @@ private fun PetGrowthCard(dog: Dog, equippedItemId: Int?, equippedItemIds: List<
         ) {
             com.example.petrunning2.ui.components.PetCharacter(
                 size = 114.dp,
+                spriteUrl = characterSpriteUrl,
                 equippedItemIds = equippedItemIds,
             )
         }
@@ -365,13 +374,16 @@ private fun TodayStatItem(
                     .background(iconBg, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
-                Canvas(modifier = Modifier.size(width = 40.dp, height = 38.dp)) {
-                    when (iconType) {
-                        StatIconType.Time -> drawClockIcon(ColorPrimaryLight)
-                        StatIconType.Distance -> drawPinIcon(ColorLocation)
-                        StatIconType.Pace -> drawSpeedIcon(ColorPace)
-                    }
+                val iconRes = when (iconType) {
+                    StatIconType.Time -> R.drawable.pace_icon
+                    StatIconType.Distance -> R.drawable.navigator_icon
+                    StatIconType.Pace -> R.drawable.timer_icon
                 }
+                Image(
+                    painter = painterResource(id = iconRes),
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -395,65 +407,6 @@ private fun TodayStatItem(
             )
         }
     }
-}
-
-// ── Icon Canvas ───────────────────────────────────────────────────────────────
-// CSS 기준으로 변환 (container: 40×38dp)
-
-private fun DrawScope.drawClockIcon(color: Color) {
-    val sw = 2.dp.toPx()
-    // ::before  inset: 10px → oval at (10,10)-(30,28)
-    drawOval(
-        color = color,
-        topLeft = Offset(10.dp.toPx(), 10.dp.toPx()),
-        size = Size(20.dp.toPx(), 18.dp.toPx()),
-        style = Stroke(sw),
-    )
-    val cx = 20.dp.toPx()
-    val cy = 19.dp.toPx()
-    // ::after  border-left + border-bottom → vertical then horizontal hand
-    drawLine(color, Offset(cx, 13.dp.toPx()), Offset(cx, cy), sw, StrokeCap.Round)
-    drawLine(color, Offset(cx, cy), Offset(26.dp.toPx(), cy), sw, StrokeCap.Round)
-}
-
-private fun DrawScope.drawPinIcon(color: Color) {
-    val sw = 2.dp.toPx()
-    val cx = 20.dp.toPx()
-    val pinCy = 15.dp.toPx()
-    val r = 7.dp.toPx()
-    // ::before  border-radius: 50% 50% 50% 0 rotate(-45deg) → teardrop circle
-    drawCircle(color = color, radius = r, center = Offset(cx, pinCy), style = Stroke(sw))
-    // Pin point (two lines converging downward)
-    drawLine(color, Offset(cx - r * 0.65f, pinCy + r * 0.65f), Offset(cx, pinCy + r * 1.55f), sw, StrokeCap.Round)
-    drawLine(color, Offset(cx + r * 0.65f, pinCy + r * 0.65f), Offset(cx, pinCy + r * 1.55f), sw, StrokeCap.Round)
-    // ::after  inner dot
-    drawCircle(color = color, radius = 2.dp.toPx(), center = Offset(cx, pinCy))
-}
-
-private fun DrawScope.drawSpeedIcon(color: Color) {
-    val sw = 2.dp.toPx()
-    val cx = 20.dp.toPx()
-    // ::before  left:10, top:13, width:20, height:13, border-bottom:0 → top-half arc
-    val arcTop = 13.dp.toPx()
-    val arcH = 13.dp.toPx()
-    drawArc(
-        color = color,
-        startAngle = 180f,
-        sweepAngle = 180f,
-        useCenter = false,
-        topLeft = Offset(10.dp.toPx(), arcTop),
-        size = Size(20.dp.toPx(), arcH * 2f),
-        style = Stroke(sw, cap = StrokeCap.Round),
-    )
-    // ::after  left:21, top:15, width:9, rotate(-35deg) → needle
-    // 회전 후 좌표: start ≈ (21.8, 18.6), end ≈ (29.2, 13.4)
-    drawLine(
-        color = color,
-        start = Offset(21.8.dp.toPx(), 18.6.dp.toPx()),
-        end = Offset(29.2.dp.toPx(), 13.4.dp.toPx()),
-        strokeWidth = sw,
-        cap = StrokeCap.Round,
-    )
 }
 
 // ── Start Button ──────────────────────────────────────────────────────────────
@@ -488,13 +441,6 @@ private fun HomeStartButton(
                 text = "달리기 시작",
                 style = AppTextStyle.titleSm.copy(fontWeight = FontWeight.ExtraBold),
             )
-            // CSS: border-right + border-bottom → skewed chevron
-            Canvas(modifier = Modifier.size(width = 10.dp, height = 20.dp)) {
-                val sw = 3.dp.toPx()
-                val midY = size.height / 2f
-                drawLine(ColorSurface, Offset(0f, 4.dp.toPx()), Offset(size.width, midY), sw, StrokeCap.Round)
-                drawLine(ColorSurface, Offset(size.width, midY), Offset(0f, size.height - 4.dp.toPx()), sw, StrokeCap.Round)
-            }
         }
     }
 }

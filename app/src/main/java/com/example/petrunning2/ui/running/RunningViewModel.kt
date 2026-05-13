@@ -56,8 +56,13 @@ class RunningViewModel @Inject constructor(
     private var locationJob: Job? = null
 
     private var lastLocation: Location? = null
-    private var milestoneHundredths = 0  // 마지막으로 알린 0.01km 단위 마일스톤
+    private var milestoneHundredths = 0
     private var rewardIdCounter = 0L
+
+    // 페이스 롤링 평균: 최근 30초 구간의 (시각ms, 누적거리km) 버퍼
+    private data class PacePoint(val timeMs: Long, val totalDistKm: Double)
+    private val paceBuffer = ArrayDeque<PacePoint>()
+    private var lastPaceDisplayMs = 0L
 
     fun startRun() {
         if (_uiState.value.status == RunStatus.RUNNING) return
@@ -72,6 +77,7 @@ class RunningViewModel @Inject constructor(
         timerJob?.cancel()
         locationJob?.cancel()
         lastLocation = null
+        paceBuffer.clear()
         val state = _uiState.value
         analyticsHelper.logRunPaused(state.elapsedSeconds, state.distanceKm)
         _uiState.update { it.copy(status = RunStatus.PAUSED) }
@@ -90,6 +96,8 @@ class RunningViewModel @Inject constructor(
         locationJob?.cancel()
         lastLocation = null
         milestoneHundredths = 0
+        paceBuffer.clear()
+        lastPaceDisplayMs = 0L
         _uiState.update { it.copy(status = RunStatus.IDLE) }
     }
 
@@ -116,44 +124,71 @@ class RunningViewModel @Inject constructor(
             locationDataSource.locationFlow()
                 .catch { /* GPS 오류 시 조용히 무시 */ }
                 .collect { location ->
-                    // 정확도 20m 초과 수신은 무시 (GPS 초기화 시 튀는 좌표 필터)
-                    if (location.accuracy > 20f) return@collect
-
-                    _routePoints.update { it + LatLngPoint(location.latitude, location.longitude) }
+                    // 정확도 25m 초과 수신은 무시 (GPS 초기화 시 튀는 좌표 필터)
+                    if (location.accuracy > 25f) return@collect
 
                     val prev = lastLocation
+                    val speedMs: Double
+                    val deltaMeters: Float
                     if (prev != null) {
-                        val deltaMeters = prev.distanceTo(location)
+                        deltaMeters = prev.distanceTo(location)
                         val deltaMs = (location.elapsedRealtimeNanos - prev.elapsedRealtimeNanos) / 1_000_000L
-                        // 사람 최대 속도(10 m/s ≈ 36 km/h) 초과면 GPS 노이즈로 버림
-                        val speedMs = if (deltaMs > 0) deltaMeters / (deltaMs / 1000.0) else 0.0
-                        if (deltaMeters >= 5f && speedMs <= 10.0) {
-                            _uiState.update { current ->
-                                val newDistKm = current.distanceKm + (deltaMeters / 1000.0)
-                                // 순간 페이스: 이번 GPS 구간의 속도로 계산 (초/km)
-                                // speedMs = m/s → 1000/speedMs = 초/km
-                                val newPace = if (speedMs > 0.1)
-                                    (1000.0 / speedMs).toLong()
-                                else current.paceSecPerKm  // 속도 너무 낮으면 이전 값 유지
-                                // 0.01km(10m)마다 보상 이벤트 발생
-                                val newHundredths = (newDistKm * 100).toInt()
-                                if (newHundredths > milestoneHundredths) {
-                                    repeat(newHundredths - milestoneHundredths) { i ->
-                                        val mNum = milestoneHundredths + i + 1
-                                        // 5번째(0.05km)마다 크레딧, 나머지는 경험치
-                                        val isCredit = mNum % 5 == 0
-                                        _rewardEvents.tryEmit(
-                                            FloatingReward(
-                                                id = ++rewardIdCounter,
-                                                text = if (isCredit) "+1 크레딧" else "+1 경험치",
-                                                isCredit = isCredit,
-                                            )
+                        speedMs = if (deltaMs > 0) deltaMeters / (deltaMs / 1000.0) else 0.0
+                        if (speedMs > 10.0) {
+                            // GPS 노이즈 점프: 경로에도 찍지 않고 기준점도 갱신하지 않음
+                            return@collect
+                        }
+                    } else {
+                        deltaMeters = 0f
+                        speedMs = 0.0
+                    }
+
+                    // 속도 검증 통과한 좌표만 지도 경로에 추가
+                    _routePoints.update { it + LatLngPoint(location.latitude, location.longitude) }
+
+                    if (prev != null && speedMs >= 0.1) {
+                        val nowMs = System.currentTimeMillis()
+                        val newDistKm = _uiState.value.distanceKm + (deltaMeters / 1000.0)
+
+                        // 페이스 롤링 버퍼 업데이트
+                        paceBuffer.addLast(PacePoint(nowMs, newDistKm))
+                        while (paceBuffer.size > 1 && nowMs - paceBuffer.first().timeMs > PACE_WINDOW_MS) {
+                            paceBuffer.removeFirst()
+                        }
+
+                        // 30초 롤링 평균 페이스 계산
+                        val rollingPace: Long? = if (paceBuffer.size >= 2) {
+                            val oldest = paceBuffer.first()
+                            val timeSec = (nowMs - oldest.timeMs) / 1000.0
+                            val distKm = newDistKm - oldest.totalDistKm
+                            if (distKm > 0.001) (timeSec / distKm).toLong() else null
+                        } else null
+
+                        // 10초마다 화면 페이스 갱신
+                        val shouldUpdatePace = rollingPace != null &&
+                            nowMs - lastPaceDisplayMs >= PACE_DISPLAY_INTERVAL_MS
+                        if (shouldUpdatePace) lastPaceDisplayMs = nowMs
+
+                        _uiState.update { current ->
+                            val newHundredths = (newDistKm * 100).toInt()
+                            if (newHundredths > milestoneHundredths) {
+                                repeat(newHundredths - milestoneHundredths) { i ->
+                                    val mNum = milestoneHundredths + i + 1
+                                    val isCredit = mNum % 5 == 0
+                                    _rewardEvents.tryEmit(
+                                        FloatingReward(
+                                            id = ++rewardIdCounter,
+                                            text = if (isCredit) "+1 크레딧" else "+1 경험치",
+                                            isCredit = isCredit,
                                         )
-                                    }
-                                    milestoneHundredths = newHundredths
+                                    )
                                 }
-                                current.copy(distanceKm = newDistKm, paceSecPerKm = newPace)
+                                milestoneHundredths = newHundredths
                             }
+                            current.copy(
+                                distanceKm = newDistKm,
+                                paceSecPerKm = if (shouldUpdatePace) rollingPace!! else current.paceSecPerKm,
+                            )
                         }
                     }
                     lastLocation = location
@@ -165,5 +200,10 @@ class RunningViewModel @Inject constructor(
         super.onCleared()
         timerJob?.cancel()
         locationJob?.cancel()
+    }
+
+    companion object {
+        private const val PACE_WINDOW_MS = 30_000L         // 30초 롤링 평균 창
+        private const val PACE_DISPLAY_INTERVAL_MS = 7_000L  // 7초마다 화면 갱신
     }
 }

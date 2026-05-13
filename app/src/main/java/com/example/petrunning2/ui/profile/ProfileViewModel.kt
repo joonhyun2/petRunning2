@@ -3,6 +3,7 @@ package com.example.petrunning2.ui.profile
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.petrunning2.analytics.AnalyticsHelper
 import com.example.petrunning2.data.Dog
 import com.example.petrunning2.data.local.entity.DogEntity
 import com.example.petrunning2.data.repository.DogRepository
@@ -22,8 +23,12 @@ import javax.inject.Inject
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val dogRepository: DogRepository,
+    private val analyticsHelper: AnalyticsHelper,
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
+
+    fun logScreenView() = analyticsHelper.logScreenView("profile")
+    fun logTabDwellTime(seconds: Long) = analyticsHelper.logTabDwellTime("profile", seconds)
 
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 

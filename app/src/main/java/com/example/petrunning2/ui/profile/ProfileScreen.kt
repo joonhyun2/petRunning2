@@ -28,6 +28,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -84,6 +86,12 @@ fun ProfileScreen(
     onLogout: () -> Unit = {},
     viewModel: ProfileViewModel = hiltViewModel(),
 ) {
+    LaunchedEffect(Unit) { viewModel.logScreenView() }
+    DisposableEffect(Unit) {
+        val enterTime = System.currentTimeMillis()
+        onDispose { viewModel.logTabDwellTime((System.currentTimeMillis() - enterTime) / 1000) }
+    }
+
     val dog by viewModel.dog.collectAsState()
     val notificationEnabled by viewModel.notificationEnabled.collectAsState()
 
@@ -624,14 +632,17 @@ private fun ProfileMenuItem(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // Menu icon
-        Canvas(modifier = Modifier.size(22.dp)) {
-            when (iconType) {
-                MenuIconType.Bag -> drawBagIcon()
-                MenuIconType.Bell -> drawBellIcon()
-                MenuIconType.Chat -> drawChatIcon()
-                MenuIconType.Logout -> drawLogoutIcon()
-            }
+        val iconRes = when (iconType) {
+            MenuIconType.Bag    -> R.drawable.bag_logo
+            MenuIconType.Bell   -> R.drawable.alarm_logo
+            MenuIconType.Chat   -> R.drawable.talk_logo
+            MenuIconType.Logout -> R.drawable.logout_logo
         }
+        Image(
+            painter = painterResource(id = iconRes),
+            contentDescription = null,
+            modifier = Modifier.size(22.dp),
+        )
 
         Spacer(modifier = Modifier.width(14.dp))
 
@@ -676,98 +687,6 @@ private fun Modifier.drawDashedTopBorder(): Modifier = this.then(
         }
     }
 )
-
-// ── Menu Icon DrawScope ──────────────────────────────────────────────────────
-
-private fun DrawScope.drawBagIcon() {
-    val color = ColorPrimaryLight
-    val sw = 2.dp.toPx()
-    // 몸통
-    drawRoundRect(
-        color = color,
-        topLeft = Offset(3.dp.toPx(), 5.dp.toPx()),
-        size = Size(16.dp.toPx(), 15.dp.toPx()),
-        cornerRadius = CornerRadius(3.dp.toPx()),
-        style = Stroke(sw),
-    )
-    // 손잡이
-    drawArc(
-        color = color,
-        startAngle = 180f,
-        sweepAngle = 180f,
-        useCenter = false,
-        topLeft = Offset(7.dp.toPx(), 1.dp.toPx()),
-        size = Size(8.dp.toPx(), 8.dp.toPx()),
-        style = Stroke(sw),
-    )
-}
-
-private fun DrawScope.drawBellIcon() {
-    val color = ColorPrimaryLight
-    val sw = 2.dp.toPx()
-    // 종 몸통
-    drawRoundRect(
-        color = color,
-        topLeft = Offset(5.dp.toPx(), 4.dp.toPx()),
-        size = Size(12.dp.toPx(), 13.dp.toPx()),
-        cornerRadius = CornerRadius(10.dp.toPx(), 10.dp.toPx()),
-        style = Stroke(sw),
-    )
-    // 추
-    drawRoundRect(
-        color = color,
-        topLeft = Offset(9.dp.toPx(), 19.dp.toPx()),
-        size = Size(4.dp.toPx(), 2.dp.toPx()),
-        cornerRadius = CornerRadius(9999f),
-    )
-}
-
-private fun DrawScope.drawChatIcon() {
-    val color = ColorPrimaryLight
-    val sw = 2.dp.toPx()
-    // 말풍선 원
-    drawCircle(
-        color = color,
-        radius = 7.dp.toPx(),
-        center = Offset(11.dp.toPx(), 11.dp.toPx()),
-        style = Stroke(sw),
-    )
-    // 꼬리
-    val tail = Path().apply {
-        moveTo(14.dp.toPx(), 16.dp.toPx())
-        lineTo(18.dp.toPx(), 19.dp.toPx())
-        lineTo(15.dp.toPx(), 14.dp.toPx())
-    }
-    drawPath(tail, color = color, style = Stroke(sw, cap = StrokeCap.Round))
-}
-
-private fun DrawScope.drawLogoutIcon() {
-    val color = ColorPrimaryLight
-    val sw = 2.dp.toPx()
-    // 문 프레임 (왼쪽 열린 사각형)
-    val frame = Path().apply {
-        moveTo(12.dp.toPx(), 3.dp.toPx())
-        lineTo(3.dp.toPx(), 3.dp.toPx())
-        lineTo(3.dp.toPx(), 19.dp.toPx())
-        lineTo(12.dp.toPx(), 19.dp.toPx())
-    }
-    drawPath(frame, color = color, style = Stroke(sw, cap = StrokeCap.Round))
-    // 화살표 (오른쪽으로)
-    drawLine(
-        color = color,
-        start = Offset(9.dp.toPx(), 11.dp.toPx()),
-        end = Offset(19.dp.toPx(), 11.dp.toPx()),
-        strokeWidth = sw,
-        cap = StrokeCap.Round,
-    )
-    // 화살표 머리
-    val arrowHead = Path().apply {
-        moveTo(16.dp.toPx(), 7.dp.toPx())
-        lineTo(20.dp.toPx(), 11.dp.toPx())
-        lineTo(16.dp.toPx(), 15.dp.toPx())
-    }
-    drawPath(arrowHead, color = color, style = Stroke(sw, cap = StrokeCap.Round))
-}
 
 // ── Preview ──────────────────────────────────────────────────────────────────
 

@@ -194,15 +194,15 @@ private fun RunningScreenContent(
                     GpsBadge(connected = uiState.status == RunStatus.RUNNING)
                 }
 
-                // 페이스 섹션
-                PaceSection(
-                    paceString = uiState.paceSecPerKm.toPaceString(),
+                // 거리 섹션 (중앙 대형)
+                DistanceSection(
+                    distanceKm = uiState.distanceKm,
                     modifier = Modifier.weight(0.35f),
                 )
 
-                // 거리/시간 2열
+                // 페이스/시간 2열
                 RunStatsRow(
-                    distanceKm = uiState.distanceKm,
+                    paceString = uiState.paceSecPerKm.toPaceString(),
                     elapsedString = uiState.elapsedSeconds.toTimeString(),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -245,7 +245,7 @@ private fun RunningScreenContent(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "위치",
+                text = "GPS",
                 style = AppTextStyle.bodySm.copy(
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 0.3.sp,
@@ -278,23 +278,22 @@ private fun RunningScreenContent(
         }
     }
 
-// ── 페이스 섹션 ───────────────────────────────────────────────────────────────
+// ── 거리 섹션 (중앙 대형) ─────────────────────────────────────────────────────
 
     @Composable
-    private fun PaceSection(paceString: String, modifier: Modifier = Modifier) {
+    private fun DistanceSection(distanceKm: Double, modifier: Modifier = Modifier) {
         Column(
             modifier = modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            // "페이스" 라벨 pill
             Box(
                 modifier = Modifier
                     .background(ColorSurfaceSubtle, CircleShape)
                     .padding(horizontal = 16.dp, vertical = 6.dp),
             ) {
                 Text(
-                    text = "페이스",
+                    text = "거리",
                     style = AppTextStyle.bodySm.copy(
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.2.sp,
@@ -305,9 +304,8 @@ private fun RunningScreenContent(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // 88sp 대형 페이스 숫자
             Text(
-                text = paceString,
+                text = "%.2f".format(distanceKm),
                 style = AppTextStyle.displayXl.copy(
                     letterSpacing = (-4.4).sp,
                 ),
@@ -318,36 +316,36 @@ private fun RunningScreenContent(
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = "현재 페이스",
+                text = "km",
                 style = AppTextStyle.bodyLg,
                 color = ColorTextSecondary,
             )
         }
     }
 
-// ── 거리/시간 2열 ─────────────────────────────────────────────────────────────
+// ── 페이스/시간 2열 ───────────────────────────────────────────────────────────
 
     @Composable
     private fun RunStatsRow(
-        distanceKm: Double,
+        paceString: String,
         elapsedString: String,
         modifier: Modifier = Modifier,
     ) {
         Row(modifier = modifier) {
-            // 거리
+            // 페이스
             Column(
                 modifier = Modifier.weight(1f),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Text(
-                    text = "%.2f".format(distanceKm),
+                    text = paceString,
                     style = AppTextStyle.metricLg,
                     color = ColorTextPrimary,
                 )
                 Text(
-                    text = "km",
-                    style = AppTextStyle.bodyMd,
+                    text = "현재 페이스",
+                    style = AppTextStyle.bodyLg,
                     color = ColorTextSecondary,
                 )
             }
