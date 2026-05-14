@@ -8,6 +8,7 @@ import com.example.petrunning2.data.repository.CatalogRepository
 import com.example.petrunning2.data.repository.DogRepository
 import com.example.petrunning2.data.repository.ItemRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.util.Locale
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -20,24 +21,27 @@ data class ClothItem(
     val drawableRes: Int,
     val price: Int,
     val name: String,
+    val nameEn: String = "",
     val category: ItemCategory = ItemCategory.HAIR,
     val isOverlay: Boolean = false,
     val imageUrl: String = "", // Firebase Storage URL (서버 아이템용)
 )
 
+fun ClothItem.localizedName(): String =
+    if (Locale.getDefault().language == "ko") name else nameEn.ifBlank { name }
+
 enum class ItemCategory { FACE, HAIR, CLOTH, THEME }
 
 internal val CLOTHES_CATALOG = listOf(
     // 얼굴 — 캐릭터에 오버레이
-    ClothItem(id = 100, drawableRes = R.drawable.face_1, price = 30, name = "돼지코", category = ItemCategory.FACE, isOverlay = true),
+    ClothItem(id = 100, drawableRes = R.drawable.face_1, price = 50, name = "돼지코", nameEn = "Pig Nose", category = ItemCategory.FACE, isOverlay = true),
     // 헤어 — ribbon만 단독 소품, 나머지는 캐릭터 오버레이
-    ClothItem(id = 1,   drawableRes = R.drawable.ribbon, price = 35, name = "리본",  category = ItemCategory.HAIR, isOverlay = false),
-    ClothItem(id = 201, drawableRes = R.drawable.hair_1, price = 40, name = "헤어1", category = ItemCategory.HAIR, isOverlay = true),
-    ClothItem(id = 202, drawableRes = R.drawable.hair_2, price = 55, name = "헤어2", category = ItemCategory.HAIR, isOverlay = true),
-    ClothItem(id = 203, drawableRes = R.drawable.hair_3, price = 65, name = "헤어3", category = ItemCategory.HAIR, isOverlay = true),
-    ClothItem(id = 205, drawableRes = R.drawable.hair_5, price = 80, name = "헤어5", category = ItemCategory.HAIR, isOverlay = true),
+    ClothItem(id = 1,   drawableRes = R.drawable.ribbon, price = 55, name = "리본",   nameEn = "Ribbon",   category = ItemCategory.HAIR, isOverlay = false),
+    ClothItem(id = 201, drawableRes = R.drawable.hair_1, price = 60, name = "고양이 귀", nameEn = "Cat Ears", category = ItemCategory.HAIR, isOverlay = true),
+    ClothItem(id = 202, drawableRes = R.drawable.hair_2, price = 75, name = "하트",   nameEn = "Heart",    category = ItemCategory.HAIR, isOverlay = true),
+    ClothItem(id = 203, drawableRes = R.drawable.hair_3, price = 85, name = "김",     nameEn = "Seaweed",  category = ItemCategory.HAIR, isOverlay = true),
     // 옷 — 눈 아래 개별 배치
-    ClothItem(id = 300, drawableRes = R.drawable.cloth_1, price = 120, name = "넥타이", category = ItemCategory.CLOTH, isOverlay = false),
+    ClothItem(id = 300, drawableRes = R.drawable.cloth_1, price = 110, name = "넥타이", nameEn = "Necktie", category = ItemCategory.CLOTH, isOverlay = false),
 )
 
 @HiltViewModel
@@ -48,8 +52,10 @@ class DecorationViewModel @Inject constructor(
     private val catalogRepository: CatalogRepository,
 ) : ViewModel() {
 
+    private val localItemIds = CLOTHES_CATALOG.map { it.id }.toSet()
+
     init {
-        viewModelScope.launch { catalogRepository.fetchCatalog() }
+        viewModelScope.launch { catalogRepository.fetchCatalog(localItemIds) }
         viewModelScope.launch { catalogRepository.fetchCharacterSpriteUrl() }
     }
 
@@ -60,10 +66,11 @@ class DecorationViewModel @Inject constructor(
             initialValue = null,
         )
 
-    // Firestore 카탈로그 (서버 데이터 있으면 사용, 없으면 로컬 fallback)
+    // CLOTHES_CATALOG(즉시) + Firestore 신규 아이템(Room DB 캐시)
     val catalog: StateFlow<List<ClothItem>> = catalogRepository.items
-        .map { serverItems ->
-            if (serverItems.isNotEmpty()) serverItems else CLOTHES_CATALOG
+        .map { dbItems ->
+            val newItems = dbItems.filter { it.id !in localItemIds }
+            CLOTHES_CATALOG + newItems
         }
         .stateIn(
             scope = viewModelScope,
@@ -113,18 +120,15 @@ class DecorationViewModel @Inject constructor(
             initialValue = emptyList(),
         )
 
-    fun purchaseItem(itemId: Int, price: Int, onResult: (Boolean) -> Unit) {
+    fun purchaseItem(itemId: Int, price: Int, category: ItemCategory, onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
             val success = dogRepository.spendCredit(price)
             if (success) {
                 itemRepository.purchaseItem(itemId)
+                itemRepository.equipItem(itemId, category)
                 val currentCatalog = catalog.value
-                val category = currentCatalog.find { it.id == itemId }?.category
                 val itemName = currentCatalog.find { it.id == itemId }?.name ?: "unknown"
-                if (category != null) {
-                    itemRepository.equipItem(itemId, category)
-                    analyticsHelper.logItemPurchased(itemId, itemName, price, category.name.lowercase())
-                }
+                analyticsHelper.logItemPurchased(itemId, itemName, price, category.name.lowercase())
             }
             onResult(success)
         }

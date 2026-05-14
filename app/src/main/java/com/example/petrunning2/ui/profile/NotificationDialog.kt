@@ -21,10 +21,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.example.petrunning2.R
 import com.example.petrunning2.ui.theme.AppTextStyle
 import com.example.petrunning2.ui.theme.ColorBorderSubtle
 import com.example.petrunning2.ui.theme.ColorPrimary
@@ -60,7 +62,7 @@ fun NotificationDialog(
                 .padding(horizontal = 24.dp, vertical = 24.dp),
         ) {
             Text(
-                text = "앱 알림",
+                text = stringResource(R.string.notification_dialog_title),
                 style = AppTextStyle.titleSm,
                 color = ColorTextPrimary,
             )
@@ -72,7 +74,7 @@ fun NotificationDialog(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "알림",
+                    text = stringResource(R.string.notification_dialog_label),
                     style = AppTextStyle.bodyLg.copy(fontWeight = FontWeight.Medium),
                     color = ColorTextPrimary,
                     modifier = Modifier.weight(1f),
@@ -99,7 +101,7 @@ fun NotificationDialog(
             Spacer(modifier = Modifier.height(6.dp))
 
             Text(
-                text = "활동 알림, 동기 부여 관련 정보를 받겠습니다.",
+                text = stringResource(R.string.notification_dialog_description),
                 style = AppTextStyle.bodySm.copy(fontSize = 12.sp),
                 color = ColorTextDisabled,
             )
@@ -111,7 +113,7 @@ fun NotificationDialog(
                 modifier = Modifier.align(Alignment.End),
             ) {
                 Text(
-                    text = "확인",
+                    text = stringResource(R.string.notification_dialog_confirm),
                     style = AppTextStyle.bodyLg.copy(fontWeight = FontWeight.Medium),
                     color = ColorPrimary,
                 )

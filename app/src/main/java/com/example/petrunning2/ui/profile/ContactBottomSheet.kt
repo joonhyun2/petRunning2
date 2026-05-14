@@ -3,6 +3,7 @@ package com.example.petrunning2.ui.profile
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
+import androidx.annotation.StringRes
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -35,11 +36,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.petrunning2.R
 import com.example.petrunning2.ui.components.PrimaryButton
 import com.example.petrunning2.ui.theme.AppTextStyle
 import com.example.petrunning2.ui.theme.ColorBg
@@ -55,10 +58,10 @@ import com.example.petrunning2.ui.theme.ColorTextPrimary
 import com.example.petrunning2.ui.theme.ColorTextSecondary
 import com.example.petrunning2.ui.theme.PetRunning2Theme
 
-private enum class ContactCategory(val label: String) {
-    Bug("버그 신고"),
-    Feature("기능 제안"),
-    Other("기타 문의"),
+private enum class ContactCategory(@StringRes val labelRes: Int) {
+    Bug(R.string.contact_category_bug),
+    Feature(R.string.contact_category_feature),
+    Other(R.string.contact_category_other),
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -73,6 +76,8 @@ fun ContactBottomSheet(
 
     val canSend = subject.isNotBlank() && message.isNotBlank()
     val context = LocalContext.current
+    val categoryLabel = stringResource(selectedCategory.labelRes)
+    val emailChooserTitle = stringResource(R.string.contact_email_chooser)
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -97,13 +102,13 @@ fun ContactBottomSheet(
         ) {
             // ── Header ──
             Text(
-                text = "문의하기",
+                text = stringResource(R.string.contact_title),
                 style = AppTextStyle.titleMd,
                 color = ColorTextPrimary,
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = "불편하신 점이나 궁금한 점을 알려주세요",
+                text = stringResource(R.string.contact_subtitle),
                 style = AppTextStyle.bodyMd,
                 color = ColorTextSecondary,
             )
@@ -112,7 +117,7 @@ fun ContactBottomSheet(
 
             // ── Category Chips ──
             Text(
-                text = "문의 유형",
+                text = stringResource(R.string.contact_category_label),
                 style = AppTextStyle.bodyMd.copy(fontWeight = FontWeight.Medium),
                 color = ColorTextSecondary,
             )
@@ -122,7 +127,7 @@ fun ContactBottomSheet(
             ) {
                 ContactCategory.entries.forEach { category ->
                     CategoryChip(
-                        label = category.label,
+                        label = stringResource(category.labelRes),
                         selected = selectedCategory == category,
                         onClick = { selectedCategory = category },
                     )
@@ -133,7 +138,7 @@ fun ContactBottomSheet(
 
             // ── Subject Field ──
             Text(
-                text = "제목",
+                text = stringResource(R.string.contact_subject_label),
                 style = AppTextStyle.bodyMd.copy(fontWeight = FontWeight.Medium),
                 color = ColorTextSecondary,
             )
@@ -141,7 +146,7 @@ fun ContactBottomSheet(
             ContactTextField(
                 value = subject,
                 onValueChange = { subject = it },
-                placeholder = "제목을 입력해주세요",
+                placeholder = stringResource(R.string.contact_subject_placeholder),
                 singleLine = true,
             )
 
@@ -149,7 +154,7 @@ fun ContactBottomSheet(
 
             // ── Message Field ──
             Text(
-                text = "내용",
+                text = stringResource(R.string.contact_message_label),
                 style = AppTextStyle.bodyMd.copy(fontWeight = FontWeight.Medium),
                 color = ColorTextSecondary,
             )
@@ -157,14 +162,14 @@ fun ContactBottomSheet(
             ContactTextField(
                 value = message,
                 onValueChange = { message = it },
-                placeholder = "문의 내용을 자세히 입력해주세요",
+                placeholder = stringResource(R.string.contact_message_placeholder),
                 singleLine = false,
                 minLines = 5,
             )
 
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "문의 내용은 개발자 이메일로 전송됩니다",
+                text = stringResource(R.string.contact_email_notice),
                 style = AppTextStyle.bodySm,
                 color = ColorTextDisabled,
             )
@@ -173,18 +178,18 @@ fun ContactBottomSheet(
 
             // ── Send Button ──
             PrimaryButton(
-                text = "문의 보내기",
+                text = stringResource(R.string.contact_send_button),
                 onClick = {
                     val intent = Intent(Intent.ACTION_SENDTO).apply {
                         data = Uri.parse("mailto:")
                         putExtra(Intent.EXTRA_EMAIL, arrayOf("mharuki527@gmail.com"))
-                        putExtra(Intent.EXTRA_SUBJECT, "[${selectedCategory.label}] $subject")
+                        putExtra(Intent.EXTRA_SUBJECT, "[$categoryLabel] $subject")
                         putExtra(Intent.EXTRA_TEXT, message)
                     }
                     try {
-                        context.startActivity(Intent.createChooser(intent, "이메일 앱 선택"))
+                        context.startActivity(Intent.createChooser(intent, emailChooserTitle))
                     } catch (e: ActivityNotFoundException) {
-                        // 이메일 앱이 없는 경우 무시
+                        // no email app installed
                     }
                     onDismiss()
                 },
@@ -302,29 +307,29 @@ private fun ContactBottomSheetPreview() {
                         .background(ColorBorder),
                 )
 
-                Text(text = "문의하기", style = AppTextStyle.titleMd, color = ColorTextPrimary)
+                Text(text = stringResource(R.string.contact_title), style = AppTextStyle.titleMd, color = ColorTextPrimary)
                 Spacer(Modifier.height(6.dp))
-                Text(text = "불편하신 점이나 궁금한 점을 알려주세요", style = AppTextStyle.bodyMd, color = ColorTextSecondary)
+                Text(text = stringResource(R.string.contact_subtitle), style = AppTextStyle.bodyMd, color = ColorTextSecondary)
                 Spacer(Modifier.height(24.dp))
-                Text(text = "문의 유형", style = AppTextStyle.bodyMd.copy(fontWeight = FontWeight.Medium), color = ColorTextSecondary)
+                Text(text = stringResource(R.string.contact_category_label), style = AppTextStyle.bodyMd.copy(fontWeight = FontWeight.Medium), color = ColorTextSecondary)
                 Spacer(Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     ContactCategory.entries.forEach { cat ->
-                        CategoryChip(label = cat.label, selected = selectedCategory == cat, onClick = { selectedCategory = cat })
+                        CategoryChip(label = stringResource(cat.labelRes), selected = selectedCategory == cat, onClick = { selectedCategory = cat })
                     }
                 }
                 Spacer(Modifier.height(20.dp))
-                Text(text = "제목", style = AppTextStyle.bodyMd.copy(fontWeight = FontWeight.Medium), color = ColorTextSecondary)
+                Text(text = stringResource(R.string.contact_subject_label), style = AppTextStyle.bodyMd.copy(fontWeight = FontWeight.Medium), color = ColorTextSecondary)
                 Spacer(Modifier.height(8.dp))
-                ContactTextField(value = subject, onValueChange = { subject = it }, placeholder = "제목을 입력해주세요", singleLine = true)
+                ContactTextField(value = subject, onValueChange = { subject = it }, placeholder = stringResource(R.string.contact_subject_placeholder), singleLine = true)
                 Spacer(Modifier.height(16.dp))
-                Text(text = "내용", style = AppTextStyle.bodyMd.copy(fontWeight = FontWeight.Medium), color = ColorTextSecondary)
+                Text(text = stringResource(R.string.contact_message_label), style = AppTextStyle.bodyMd.copy(fontWeight = FontWeight.Medium), color = ColorTextSecondary)
                 Spacer(Modifier.height(8.dp))
-                ContactTextField(value = message, onValueChange = { message = it }, placeholder = "문의 내용을 자세히 입력해주세요", singleLine = false, minLines = 5)
+                ContactTextField(value = message, onValueChange = { message = it }, placeholder = stringResource(R.string.contact_message_placeholder), singleLine = false, minLines = 5)
                 Spacer(Modifier.height(8.dp))
-                Text(text = "문의 내용은 개발자 이메일로 전송됩니다", style = AppTextStyle.bodySm, color = ColorTextDisabled)
+                Text(text = stringResource(R.string.contact_email_notice), style = AppTextStyle.bodySm, color = ColorTextDisabled)
                 Spacer(Modifier.height(24.dp))
-                PrimaryButton(text = "문의 보내기", onClick = {}, enabled = canSend)
+                PrimaryButton(text = stringResource(R.string.contact_send_button), onClick = {}, enabled = canSend)
             }
         }
     }

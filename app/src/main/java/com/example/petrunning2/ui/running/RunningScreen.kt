@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -79,6 +80,7 @@ fun RunningScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val equippedItemId by viewModel.equippedItemId.collectAsState()
+    val catalog by viewModel.catalog.collectAsState()
 
     val activeRewards = remember { mutableStateListOf<FloatingReward>() }
     LaunchedEffect(Unit) {
@@ -92,6 +94,7 @@ fun RunningScreen(
     RunningScreenContent(
         uiState = uiState,
         equippedItemId = equippedItemId,
+        catalog = catalog,
         activeRewards = activeRewards,
         onRewardFinished = { id -> activeRewards.removeAll { it.id == id } },
         onPause = {
@@ -101,7 +104,6 @@ fun RunningScreen(
         onStop = {
             viewModel.stopRun()
             if (uiState.distanceKm * 1000 < 5.0) {
-                // 5m 미만 → 팝업 표시
                 showTooShortDialog = true
             } else {
                 onNavigateToEndRun()
@@ -126,7 +128,7 @@ fun RunningScreen(
                     verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(24.dp),
                 ) {
                     androidx.compose.material3.Text(
-                        text = "달린거리가 너무 짧아\n기록을 저장할 수 없어요!",
+                        text = stringResource(R.string.running_too_short_message),
                         style = AppTextStyle.titleSm,
                         color = ColorTextPrimary,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -148,7 +150,7 @@ fun RunningScreen(
                         ),
                     ) {
                         androidx.compose.material3.Text(
-                            text = "확인",
+                            text = stringResource(R.string.running_confirm),
                             style = AppTextStyle.bodyMd.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
                         )
                     }
@@ -162,6 +164,7 @@ fun RunningScreen(
 private fun RunningScreenContent(
         uiState: RunningUiState,
         equippedItemId: Int?,
+        catalog: List<com.example.petrunning2.ui.decoration.ClothItem> = com.example.petrunning2.ui.decoration.CLOTHES_CATALOG,
         activeRewards: List<FloatingReward>,
         onRewardFinished: (Long) -> Unit,
         onPause: () -> Unit,
@@ -214,6 +217,7 @@ private fun RunningScreenContent(
                 // 캐릭터 영역
                 RunnerArea(
                     equippedItemId = equippedItemId,
+                    catalog = catalog,
                     activeRewards = activeRewards,
                     onRewardFinished = onRewardFinished,
                     modifier = Modifier
@@ -293,7 +297,7 @@ private fun RunningScreenContent(
                     .padding(horizontal = 16.dp, vertical = 6.dp),
             ) {
                 Text(
-                    text = "거리",
+                    text = stringResource(R.string.running_distance_label),
                     style = AppTextStyle.bodySm.copy(
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.2.sp,
@@ -344,7 +348,7 @@ private fun RunningScreenContent(
                     color = ColorTextPrimary,
                 )
                 Text(
-                    text = "현재 페이스",
+                    text = stringResource(R.string.running_current_pace),
                     style = AppTextStyle.bodyLg,
                     color = ColorTextSecondary,
                 )
@@ -371,7 +375,7 @@ private fun RunningScreenContent(
                     color = ColorTextPrimary,
                 )
                 Text(
-                    text = "시간",
+                    text = stringResource(R.string.running_time),
                     style = AppTextStyle.bodyMd,
                     color = ColorTextSecondary,
                 )
@@ -384,6 +388,7 @@ private fun RunningScreenContent(
     @Composable
     private fun RunnerArea(
         equippedItemId: Int?,
+        catalog: List<com.example.petrunning2.ui.decoration.ClothItem> = com.example.petrunning2.ui.decoration.CLOTHES_CATALOG,
         activeRewards: List<FloatingReward>,
         onRewardFinished: (Long) -> Unit,
         modifier: Modifier = Modifier,
@@ -412,6 +417,7 @@ private fun RunningScreenContent(
             com.example.petrunning2.ui.components.PetCharacter(
                 size = 114.dp,
                 equippedItemId = equippedItemId,
+                catalog = catalog,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .offset(y = 59.dp),
@@ -539,7 +545,7 @@ private fun RunningScreenContent(
                         if (isPaused) drawPlayIcon(ColorSurface) else drawPauseIcon(ColorSurface)
                     }
                     Text(
-                        text = if (isPaused) "재개" else "일시정지",
+                        text = if (isPaused) stringResource(R.string.running_resume) else stringResource(R.string.running_pause),
                         style = AppTextStyle.titleSm.copy(
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 0.9.sp
@@ -633,7 +639,7 @@ private fun RunningScreenContent(
                         .background(ColorPrimary),
                 )
                 Text(
-                    text = "종료",
+                    text = stringResource(R.string.running_stop),
                     style = AppTextStyle.titleSm.copy(
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.9.sp,

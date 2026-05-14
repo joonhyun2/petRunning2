@@ -41,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -83,12 +84,14 @@ fun HomeScreen(
     val equippedItemId by viewModel.equippedItemId.collectAsState()
     val equippedItemIds by viewModel.equippedItemIds.collectAsState()
     val characterSpriteUrl by viewModel.characterSpriteUrl.collectAsState()
+    val catalog by viewModel.catalog.collectAsState()
     HomeScreenContent(
         dog = dog,
         stats = stats,
         equippedItemId = equippedItemId,
         equippedItemIds = equippedItemIds,
         characterSpriteUrl = characterSpriteUrl,
+        catalog = catalog,
         onNavigateToRunning = {
             viewModel.logStartButtonTapped()
             onNavigateToRunning()
@@ -106,6 +109,7 @@ private fun HomeScreenContent(
     equippedItemId: Int?,
     equippedItemIds: List<Int> = emptyList(),
     characterSpriteUrl: String? = null,
+    catalog: List<com.example.petrunning2.ui.decoration.ClothItem> = com.example.petrunning2.ui.decoration.CLOTHES_CATALOG,
     onNavigateToRunning: () -> Unit,
     onNavigateToDecoration: () -> Unit,
     onNavigateToStats: () -> Unit,
@@ -151,6 +155,7 @@ private fun HomeScreenContent(
                 equippedItemId = equippedItemId,
                 equippedItemIds = equippedItemIds,
                 characterSpriteUrl = characterSpriteUrl,
+                catalog = catalog,
                 modifier = Modifier.weight(1f),
             )
 
@@ -206,7 +211,7 @@ private fun CoinDisplay(credit: Int) {
 // ── Pet Growth Card ──────────────────────────────────────────────────────────
 
 @Composable
-private fun PetGrowthCard(dog: Dog, equippedItemId: Int?, equippedItemIds: List<Int> = emptyList(), characterSpriteUrl: String? = null, modifier: Modifier = Modifier) {
+private fun PetGrowthCard(dog: Dog, equippedItemId: Int?, equippedItemIds: List<Int> = emptyList(), characterSpriteUrl: String? = null, catalog: List<com.example.petrunning2.ui.decoration.ClothItem> = com.example.petrunning2.ui.decoration.CLOTHES_CATALOG, modifier: Modifier = Modifier) {
     val progress = if (dog.maxXp > 0) dog.currentXp.toFloat() / dog.maxXp else 0f
 
     Column(
@@ -233,6 +238,7 @@ private fun PetGrowthCard(dog: Dog, equippedItemId: Int?, equippedItemIds: List<
                 size = 114.dp,
                 spriteUrl = characterSpriteUrl,
                 equippedItemIds = equippedItemIds,
+                catalog = catalog,
             )
         }
 
@@ -262,7 +268,7 @@ private fun PetProgressPanel(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(
-            text = "레벨 $level",
+            text = stringResource(R.string.home_level, level),
             style = AppTextStyle.bodyMd.copy(fontWeight = FontWeight.Bold),
             color = ColorPrimaryLight,
             maxLines = 1,
@@ -308,7 +314,7 @@ private fun TodayStatsCard(stats: TodayStats) {
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(
-            text = "오늘",
+            text = stringResource(R.string.home_today),
             style = AppTextStyle.titleSm,
             color = ColorPrimaryLight,
         )
@@ -319,19 +325,19 @@ private fun TodayStatsCard(stats: TodayStats) {
             TodayStatItem(
                 iconType = StatIconType.Time,
                 value = formatTime(stats.totalTimeSeconds),
-                label = "뛴 시간",
+                label = stringResource(R.string.home_stat_time),
                 modifier = Modifier.weight(1f),
             )
             TodayStatItem(
                 iconType = StatIconType.Distance,
                 value = "%.1f".format(stats.totalDistanceKm),
-                label = "뛴 거리",
+                label = stringResource(R.string.home_stat_distance),
                 modifier = Modifier.weight(1f),
             )
             TodayStatItem(
                 iconType = StatIconType.Pace,
                 value = formatPace(stats.avgPaceSecPerKm),
-                label = "평균 페이스",
+                label = stringResource(R.string.home_stat_pace),
                 modifier = Modifier.weight(1f),
             )
         }
@@ -438,7 +444,7 @@ private fun HomeStartButton(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "달리기 시작",
+                text = stringResource(R.string.home_start_running),
                 style = AppTextStyle.titleSm.copy(fontWeight = FontWeight.ExtraBold),
             )
         }

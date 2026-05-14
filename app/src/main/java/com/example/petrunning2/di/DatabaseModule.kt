@@ -3,6 +3,7 @@ package com.example.petrunning2.di
 import android.content.Context
 import androidx.room.Room
 import com.example.petrunning2.data.local.AppDatabase
+import com.example.petrunning2.data.local.dao.CatalogItemDao
 import com.example.petrunning2.data.local.dao.DogDao
 import com.example.petrunning2.data.local.dao.OwnedItemDao
 import com.example.petrunning2.data.local.dao.RunRecordDao
@@ -32,4 +33,7 @@ object DatabaseModule {
 
     @Provides
     fun provideOwnedItemDao(db: AppDatabase): OwnedItemDao = db.ownedItemDao()
+
+    @Provides
+    fun provideCatalogItemDao(db: AppDatabase): CatalogItemDao = db.catalogItemDao()
 }

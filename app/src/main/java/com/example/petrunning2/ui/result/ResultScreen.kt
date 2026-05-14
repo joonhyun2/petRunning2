@@ -27,6 +27,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -47,6 +48,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -101,6 +103,11 @@ fun ResultScreen(
     // 데이터 세팅 (최초 1회)
     androidx.compose.runtime.LaunchedEffect(Unit) {
         viewModel.setRunData(distanceKm, elapsedSeconds, paceSecPerKm, routePoints)
+    }
+
+    // 뒤로가기 시에도 결과 저장 (history 조회는 저장 불필요)
+    BackHandler(enabled = !isFromHistory) {
+        viewModel.saveResult(onComplete = onNavigateToHome)
     }
 
     ResultScreenContent(
@@ -164,18 +171,18 @@ private fun ResultScreenContent(
             isFromHistory = isFromHistory,
             onDone = onDone,
             onShare = {
-                val shareText = buildString {
-                    append("🏃 달리기 완료!\n")
-                    append("거리: ${"%.2f".format(uiState.distanceKm)}km\n")
-                    append("시간: ${formatTime(uiState.elapsedSeconds)}\n")
-                    append("페이스: ${formatPace(uiState.paceSecPerKm)}")
-                }
+                val shareText = context.getString(
+                    R.string.result_share_text,
+                    "%.2f".format(uiState.distanceKm),
+                    formatTime(uiState.elapsedSeconds),
+                    formatPace(uiState.paceSecPerKm),
+                )
                 val intent = Intent(Intent.ACTION_SEND).apply {
                     type = "text/plain"
                     putExtra(Intent.EXTRA_TEXT, shareText)
                 }
                 com.example.petrunning2.analytics.AnalyticsHelper().logResultShared()
-                context.startActivity(Intent.createChooser(intent, "공유"))
+                context.startActivity(Intent.createChooser(intent, context.getString(R.string.result_share_chooser)))
             },
         )
     }
@@ -256,9 +263,9 @@ private fun SummaryCard(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            SummaryMetric(value = formatTime(elapsedSeconds), label = "뛴 시간")
+            SummaryMetric(value = formatTime(elapsedSeconds), label = stringResource(R.string.result_time_label))
             DotSeparator()
-            SummaryMetric(value = formatPace(paceSecPerKm), label = "평균 페이스")
+            SummaryMetric(value = formatPace(paceSecPerKm), label = stringResource(R.string.result_pace_label))
         }
     }
 }
@@ -392,7 +399,7 @@ private fun MapCard(routePoints: String, locationLabel: String = "") {
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "경로 데이터 없음",
+                    text = stringResource(R.string.result_no_route),
                     style = AppTextStyle.bodySm,
                     color = ColorTextDisabled,
                 )
@@ -438,18 +445,18 @@ private fun EarnedGrid(earnedXp: Int, earnedCredit: Int) {
             iconBg = null,
             iconColor = ColorExp,
             iconText = null,
-            label = "획득 경험치",
+            label = stringResource(R.string.result_xp_label),
             value = "+$earnedXp",
-            unit = "경험치",
+            unit = stringResource(R.string.result_xp_unit),
             modifier = Modifier.weight(1f),
         )
         EarnedCard(
             iconBg = ColorCreditBg,
             iconColor = ColorCredit,
             iconText = "★",
-            label = "획득 크레딧",
+            label = stringResource(R.string.result_credit_label),
             value = "+$earnedCredit",
-            unit = "크레딧",
+            unit = stringResource(R.string.result_credit_unit),
             modifier = Modifier.weight(1f),
         )
     }
@@ -577,9 +584,9 @@ private fun EndActions(
                 }
                 Text(
                     text = when {
-                        isSaving -> "저장 중..."
-                        isFromHistory -> "확인"
-                        else -> "완료"
+                        isSaving -> stringResource(R.string.result_saving)
+                        isFromHistory -> stringResource(R.string.result_confirm)
+                        else -> stringResource(R.string.result_done)
                     },
                     style = AppTextStyle.titleSm.copy(fontWeight = FontWeight.Bold),
                 )
@@ -613,7 +620,7 @@ private fun EndActions(
                     drawShareIcon(ColorPrimary)
                 }
                 Text(
-                    text = "공유",
+                    text = stringResource(R.string.result_share),
                     style = AppTextStyle.bodyMd.copy(fontWeight = FontWeight.Bold),
                 )
             }

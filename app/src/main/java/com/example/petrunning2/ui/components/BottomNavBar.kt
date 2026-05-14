@@ -26,9 +26,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.annotation.StringRes
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.example.petrunning2.R
 import com.example.petrunning2.ui.theme.AppTextStyle
 import com.example.petrunning2.ui.theme.ColorPrimaryActive
 import com.example.petrunning2.ui.theme.ColorSurface
@@ -37,13 +40,13 @@ import androidx.compose.ui.text.font.FontWeight
 
 enum class BottomNavDestination(
     val route: String,
-    val label: String,
+    @StringRes val labelRes: Int,
     val icon: ImageVector,
 ) {
-    Home("home", "홈", Icons.Filled.Home),
-    Decoration("decoration", "꾸미기", Icons.Filled.AutoAwesome),
-    Statistics("statistics", "통계", Icons.Filled.ShowChart),
-    Profile("profile", "프로필", Icons.Filled.Person);
+    Home("home", R.string.nav_home, Icons.Filled.Home),
+    Decoration("decoration", R.string.nav_decoration, Icons.Filled.AutoAwesome),
+    Statistics("statistics", R.string.nav_statistics, Icons.Filled.ShowChart),
+    Profile("profile", R.string.nav_profile, Icons.Filled.Person);
 
     companion object {
         val all = entries
@@ -109,14 +112,15 @@ private fun BottomNavItem(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
+        val label = stringResource(destination.labelRes)
         Icon(
             imageVector = destination.icon,
-            contentDescription = destination.label,
+            contentDescription = label,
             tint = color,
             modifier = Modifier.size(24.dp),
         )
         Text(
-            text = destination.label,
+            text = label,
             style = AppTextStyle.caption.copy(fontWeight = FontWeight.Medium),
             color = color,
         )

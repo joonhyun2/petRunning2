@@ -1,3 +1,145 @@
 <resources>
-    <string name="app_name">petRunning2</string>
+    <string name="app_name">Runi</string>
+
+    <!-- Login -->
+    <string name="login_subtitle">달리면서 캐릭터를 키워보세요</string>
+    <string name="login_guest_button">게스트로 시작하기</string>
+
+    <!-- Home -->
+    <string name="home_start_running">달리기 시작</string>
+    <string name="home_today">오늘</string>
+    <string name="home_stat_time">뛴 시간</string>
+    <string name="home_stat_distance">뛴 거리</string>
+    <string name="home_stat_pace">평균 페이스</string>
+    <string name="home_level">레벨 %d</string>
+
+    <!-- Running -->
+    <string name="running_distance_label">거리</string>
+    <string name="running_current_pace">현재 페이스</string>
+    <string name="running_time">시간</string>
+    <string name="running_pause">일시정지</string>
+    <string name="running_resume">재개</string>
+    <string name="running_stop">종료</string>
+    <string name="running_reward_xp">+1 경험치</string>
+    <string name="running_reward_credit">+1 크레딧</string>
+    <string name="running_too_short_message">달린거리가 너무 짧아\n기록을 저장할 수 없어요!</string>
+    <string name="running_confirm">확인</string>
+
+    <!-- Result -->
+    <string name="result_no_route">경로 데이터 없음</string>
+    <string name="result_share">공유</string>
+    <string name="result_done">완료</string>
+    <string name="result_saving">저장 중...</string>
+    <string name="result_confirm">확인</string>
+    <string name="result_time_label">뛴 시간</string>
+    <string name="result_pace_label">평균 페이스</string>
+    <string name="result_xp_label">획득 경험치</string>
+    <string name="result_xp_unit">경험치</string>
+    <string name="result_credit_label">획득 크레딧</string>
+    <string name="result_credit_unit">크레딧</string>
+    <string name="result_share_text">🏃 달리기 완료!\n거리: %1$skm\n시간: %2$s\n페이스: %3$s</string>
+    <string name="result_share_chooser">공유</string>
+
+    <!-- Statistics -->
+    <string name="stats_title">기록</string>
+    <string name="stats_recent_activity">최근 활동</string>
+    <string name="stats_no_activity">최근활동이 없습니다.</string>
+    <string name="stats_tab_weekly">주간</string>
+    <string name="stats_tab_monthly">월간</string>
+    <string name="stats_tab_yearly">년간</string>
+    <string name="stats_metric_time">시간</string>
+    <string name="stats_metric_pace">페이스</string>
+    <string name="stats_metric_earned">획득</string>
+    <string name="stats_prev_week">이전 주</string>
+    <string name="stats_next_week">다음 주</string>
+    <string name="stats_prev_month">이전 달</string>
+    <string name="stats_next_month">다음 달</string>
+    <string name="stats_prev_year">이전 년도</string>
+    <string name="stats_next_year">다음 년도</string>
+    <string name="stats_week_label">%1$d년 %2$d월 %3$d주차</string>
+    <string name="stats_month_label">%1$d년 %2$d월</string>
+    <string name="stats_year_label">%1$d년</string>
+    <string name="stats_detail_view">상세 보기</string>
+    <string name="stats_day_mon">월</string>
+    <string name="stats_day_tue">화</string>
+    <string name="stats_day_wed">수</string>
+    <string name="stats_day_thu">목</string>
+    <string name="stats_day_fri">금</string>
+    <string name="stats_day_sat">토</string>
+    <string name="stats_day_sun">일</string>
+    <string name="stats_week_unit">주</string>
+
+    <!-- Decoration -->
+    <string name="decoration_tab_face">얼굴</string>
+    <string name="decoration_tab_hair">헤어</string>
+    <string name="decoration_tab_cloth">옷</string>
+    <string name="decoration_tab_theme">테마</string>
+    <string name="decoration_reset">초기화</string>
+    <string name="decoration_apply">적용</string>
+    <string name="decoration_cancel">취소</string>
+    <string name="decoration_purchase">구매</string>
+    <string name="decoration_purchase_price">★ %d 크레딧</string>
+    <string name="decoration_purchase_no">취소</string>
+    <string name="decoration_purchase_yes">구매</string>
+    <string name="decoration_purchase_success">구매를 완료하였습니다!</string>
+    <string name="decoration_purchase_confirm_button">확인</string>
+    <string name="decoration_insufficient_credit">크레딧이 부족해요!</string>
+    <string name="decoration_insufficient_credit_hint">달리기를 해서 크레딧을 모아보세요</string>
+    <string name="decoration_insufficient_confirm">확인</string>
+
+    <!-- Bottom Navigation -->
+    <string name="nav_home">홈</string>
+    <string name="nav_decoration">꾸미기</string>
+    <string name="nav_statistics">기록</string>
+    <string name="nav_profile">프로필</string>
+
+    <!-- Profile -->
+    <string name="profile_status">함께 달리며 성장 중</string>
+    <string name="profile_edit_button">프로필 수정</string>
+    <string name="profile_level">레벨 %d</string>
+    <string name="profile_badges_title">획득 배지</string>
+    <string name="profile_view_all">전체 보기</string>
+    <string name="badge_sprout_runner">새싹 러너</string>
+    <string name="badge_consecutive_challenger">연속 챌린저</string>
+    <string name="badge_steady_steps">꾸준한 발걸음</string>
+    <string name="profile_menu_decoration">꾸미기</string>
+    <string name="profile_menu_notification">알림 설정</string>
+    <string name="profile_menu_contact">문의하기</string>
+    <string name="profile_menu_logout">로그아웃</string>
+
+    <!-- Edit Name Dialog -->
+    <string name="edit_name_title">이름 수정</string>
+    <string name="edit_name_placeholder">이름을 입력해주세요</string>
+    <string name="edit_name_cancel">취소</string>
+    <string name="edit_name_confirm">확인</string>
+
+    <!-- Notification Dialog -->
+    <string name="notification_dialog_title">앱 알림</string>
+    <string name="notification_dialog_label">알림</string>
+    <string name="notification_dialog_description">활동 알림, 동기 부여 관련 정보를 받겠습니다.</string>
+    <string name="notification_dialog_confirm">확인</string>
+
+    <!-- Contact Bottom Sheet -->
+    <string name="contact_title">문의하기</string>
+    <string name="contact_subtitle">불편하신 점이나 궁금한 점을 알려주세요</string>
+    <string name="contact_category_label">문의 유형</string>
+    <string name="contact_subject_label">제목</string>
+    <string name="contact_subject_placeholder">제목을 입력해주세요</string>
+    <string name="contact_message_label">내용</string>
+    <string name="contact_message_placeholder">문의 내용을 자세히 입력해주세요</string>
+    <string name="contact_email_notice">문의 내용은 개발자 이메일로 전송됩니다</string>
+    <string name="contact_send_button">문의 보내기</string>
+    <string name="contact_category_bug">버그 신고</string>
+    <string name="contact_category_feature">기능 제안</string>
+    <string name="contact_category_other">기타 문의</string>
+    <string name="contact_email_chooser">이메일 앱 선택</string>
+
+    <!-- Notification (NotificationHelper) -->
+    <string name="notification_channel_name">달리기 알림</string>
+    <string name="notification_channel_description">반려견과 달리기 시간을 알려드려요</string>
+    <string name="notification_title">달리기 시간이에요!</string>
+    <string name="notification_msg_1">오늘 %s 과 같이 러닝, 어떠신가요?</string>
+    <string name="notification_msg_2">%s 이 기다리고 있어요! 오늘 같이 달려볼까요?</string>
+    <string name="notification_msg_3">달리기 한 번만 더! %s 이 신나게 뛰어다니고 싶어해요</string>
+    <string name="notification_msg_4">오늘 %s 과 달리기 어떠세요?</string>
 </resources>

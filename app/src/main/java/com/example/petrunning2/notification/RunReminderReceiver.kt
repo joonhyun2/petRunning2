@@ -23,7 +23,7 @@ class RunReminderReceiver : BroadcastReceiver() {
             // 알람 트리거 → 알림 표시
             else -> {
                 if (enabled) {
-                    val petName = prefs.getString(KEY_PET_NAME, "Pix") ?: "Pix"
+                    val petName = prefs.getString(KEY_PET_NAME, "Runi") ?: "Runi"
                     NotificationHelper.showReminder(context, petName)
                 }
             }

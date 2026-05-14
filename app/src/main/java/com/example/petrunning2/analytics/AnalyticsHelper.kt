@@ -135,6 +135,10 @@ class AnalyticsHelper @Inject constructor() {
         analytics.logEvent("home_start_button_tapped", null)
     }
 
+    fun logGuestLoginTapped() {
+        analytics.logEvent("guest_login_tapped", null)
+    }
+
     fun logTabDwellTime(tabName: String, durationSeconds: Long) {
         analytics.logEvent("tab_dwell_time", Bundle().apply {
             putString("tab_name", tabName)

@@ -61,7 +61,7 @@ object NotificationHelper {
         alarmManager.cancel(buildAlarmPendingIntent(context))
     }
 
-    fun showReminder(context: Context, petName: String = "Pix") {
+    fun showReminder(context: Context, petName: String = "Runi") {
         val tapIntent = PendingIntent.getActivity(
             context,
             0,

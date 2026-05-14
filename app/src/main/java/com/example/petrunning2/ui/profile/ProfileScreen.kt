@@ -51,6 +51,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -165,7 +166,7 @@ fun ProfileScreen(
             ) {
                 ProfileCard(
                     name = dog.name,
-                    statusText = "함께 달리며 성장 중",
+                    statusText = stringResource(R.string.profile_status),
                     level = dog.level,
                     progress = if (dog.maxXp > 0) dog.currentXp.toFloat() / dog.maxXp else 0f,
                     onEditProfile = { showEditNameDialog = true },
@@ -270,7 +271,7 @@ private fun ProfileCard(
                     },
                 ) {
                     Text(
-                        text = "프로필 수정",
+                        text = stringResource(R.string.profile_edit_button),
                         style = AppTextStyle.bodyMd,
                     )
                 }
@@ -293,7 +294,7 @@ private fun ProfileCard(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = "레벨 $level",
+                text = stringResource(R.string.profile_level, level),
                 style = AppTextStyle.bodyMd.copy(fontWeight = FontWeight.Bold),
                 color = ColorPrimaryLight,
             )
@@ -347,7 +348,7 @@ private fun BadgeSectionCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "획득 배지",
+                text = stringResource(R.string.profile_badges_title),
                 style = AppTextStyle.titleSm.copy(fontWeight = FontWeight.Medium),
                 color = ColorPrimary,
             )
@@ -363,7 +364,7 @@ private fun BadgeSectionCard(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Text(
-                    text = "전체 보기",
+                    text = stringResource(R.string.profile_view_all),
                     style = AppTextStyle.bodySm,
                     color = ColorTextDisabled,
                 )
@@ -392,15 +393,15 @@ private fun BadgeSectionCard(
         ) {
             BadgeItem(
                 type = BadgeType.Plant,
-                label = "새싹 러너",
+                label = stringResource(R.string.badge_sprout_runner),
             )
             BadgeItem(
                 type = BadgeType.Cone,
-                label = "연속 챌린저",
+                label = stringResource(R.string.badge_consecutive_challenger),
             )
             BadgeItem(
                 type = BadgeType.Shoe,
-                label = "꾸준한 발걸음",
+                label = stringResource(R.string.badge_steady_steps),
             )
         }
     }
@@ -586,25 +587,25 @@ private fun ProfileMenuCard(
     ) {
         ProfileMenuItem(
             iconType = MenuIconType.Bag,
-            label = "꾸미기",
+            label = stringResource(R.string.profile_menu_decoration),
             onClick = onMyItems,
             showTopBorder = false,
         )
         ProfileMenuItem(
             iconType = MenuIconType.Bell,
-            label = "알림 설정",
+            label = stringResource(R.string.profile_menu_notification),
             onClick = onNotificationSettings,
             showTopBorder = true,
         )
         ProfileMenuItem(
             iconType = MenuIconType.Chat,
-            label = "문의하기",
+            label = stringResource(R.string.profile_menu_contact),
             onClick = onContact,
             showTopBorder = true,
         )
         ProfileMenuItem(
             iconType = MenuIconType.Logout,
-            label = "로그아웃",
+            label = stringResource(R.string.profile_menu_logout),
             onClick = onLogout,
             showTopBorder = true,
         )

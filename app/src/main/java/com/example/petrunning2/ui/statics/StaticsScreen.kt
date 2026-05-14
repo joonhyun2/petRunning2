@@ -41,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -48,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.border
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.petrunning2.R
 import com.example.petrunning2.data.local.entity.RunRecordEntity
 import com.example.petrunning2.ui.components.BottomNavBar
 import com.example.petrunning2.ui.components.BottomNavDestination
@@ -63,9 +65,6 @@ import com.example.petrunning2.ui.theme.ColorTextSecondary
 import com.example.petrunning2.ui.theme.PetRunning2Theme
 import java.util.Calendar
 
-// 탭: 주간 / 월간 / 년간
-private val periodTabs = listOf("주간", "월간", "년간")
-private val dayLabels = listOf("월", "화", "수", "목", "금", "토", "일")
 
 @Composable
 fun StaticsScreen(
@@ -174,7 +173,17 @@ private fun StaticsScreenContent(
             computeBarData(records, selectedPeriod, weeklyYear, weeklyMonth, weeklyWeekOfMonth, monthlyYear, monthlyMonth, yearlyYear)
         }
     }
-    val barLabels = getBarLabels(selectedPeriod, monthlyYear, monthlyMonth)
+    val dayLabels = listOf(
+        stringResource(R.string.stats_day_mon),
+        stringResource(R.string.stats_day_tue),
+        stringResource(R.string.stats_day_wed),
+        stringResource(R.string.stats_day_thu),
+        stringResource(R.string.stats_day_fri),
+        stringResource(R.string.stats_day_sat),
+        stringResource(R.string.stats_day_sun),
+    )
+    val weekSuffix = stringResource(R.string.stats_week_unit)
+    val barLabels = getBarLabels(selectedPeriod, monthlyYear, monthlyMonth, dayLabels, weekSuffix)
     var selectedBarIndex by remember(selectedPeriod) { mutableStateOf<Int?>(null) }
 
     val displayRecords by remember(records, selectedPeriod, weeklyYear, weeklyMonth, weeklyWeekOfMonth, monthlyYear, monthlyMonth, yearlyYear) {
@@ -262,13 +271,18 @@ private fun StaticsScreenContent(
 
 @Composable
 private fun StaticsHeader(selectedPeriod: Int, onPeriodSelected: (Int) -> Unit) {
+    val periodTabs = listOf(
+        stringResource(R.string.stats_tab_weekly),
+        stringResource(R.string.stats_tab_monthly),
+        stringResource(R.string.stats_tab_yearly),
+    )
     Row(
         modifier = Modifier.fillMaxWidth().height(46.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(
-            text = "통계",
+            text = stringResource(R.string.stats_title),
             style = AppTextStyle.titleMd.copy(fontWeight = FontWeight.ExtraBold),
             color = ColorPrimaryChart,
         )
@@ -323,7 +337,7 @@ private fun WeeklySelector(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            Icons.Filled.ChevronLeft, contentDescription = "이전 주",
+            Icons.Filled.ChevronLeft, contentDescription = stringResource(R.string.stats_prev_week),
             tint = ColorTextSecondary,
             modifier = Modifier.size(28.dp).clickable {
                 if (weekOfMonth > 1) {
@@ -338,13 +352,13 @@ private fun WeeklySelector(
         )
         Spacer(modifier = Modifier.width(16.dp))
         Text(
-            text = "${year}년 ${month + 1}월 ${weekOfMonth}주차",
+            text = stringResource(R.string.stats_week_label, year, month + 1, weekOfMonth),
             style = AppTextStyle.titleSm.copy(fontWeight = FontWeight.Bold),
             color = ColorTextPrimary,
         )
         Spacer(modifier = Modifier.width(16.dp))
         Icon(
-            Icons.Filled.ChevronRight, contentDescription = "다음 주",
+            Icons.Filled.ChevronRight, contentDescription = stringResource(R.string.stats_next_week),
             tint = ColorTextSecondary,
             modifier = Modifier.size(28.dp).clickable {
                 if (weekOfMonth < maxWeeks) {
@@ -369,19 +383,19 @@ private fun MonthlySelector(year: Int, month: Int, onMonthChange: (Int) -> Unit)
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            Icons.Filled.ChevronLeft, contentDescription = "이전 달",
+            Icons.Filled.ChevronLeft, contentDescription = stringResource(R.string.stats_prev_month),
             tint = ColorTextSecondary,
             modifier = Modifier.size(28.dp).clickable { onMonthChange(-1) },
         )
         Spacer(modifier = Modifier.width(16.dp))
         Text(
-            text = "${year}년 ${month + 1}월",
+            text = stringResource(R.string.stats_month_label, year, month + 1),
             style = AppTextStyle.titleSm.copy(fontWeight = FontWeight.Bold),
             color = ColorTextPrimary,
         )
         Spacer(modifier = Modifier.width(16.dp))
         Icon(
-            Icons.Filled.ChevronRight, contentDescription = "다음 달",
+            Icons.Filled.ChevronRight, contentDescription = stringResource(R.string.stats_next_month),
             tint = ColorTextSecondary,
             modifier = Modifier.size(28.dp).clickable { onMonthChange(1) },
         )
@@ -398,19 +412,19 @@ private fun YearlySelector(year: Int, onYearChange: (Int) -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            Icons.Filled.ChevronLeft, contentDescription = "이전 년도",
+            Icons.Filled.ChevronLeft, contentDescription = stringResource(R.string.stats_prev_year),
             tint = ColorTextSecondary,
             modifier = Modifier.size(28.dp).clickable { onYearChange(-1) },
         )
         Spacer(modifier = Modifier.width(16.dp))
         Text(
-            text = "${year}년",
+            text = stringResource(R.string.stats_year_label, year),
             style = AppTextStyle.titleSm.copy(fontWeight = FontWeight.Bold),
             color = ColorTextPrimary,
         )
         Spacer(modifier = Modifier.width(16.dp))
         Icon(
-            Icons.Filled.ChevronRight, contentDescription = "다음 년도",
+            Icons.Filled.ChevronRight, contentDescription = stringResource(R.string.stats_next_year),
             tint = ColorTextSecondary,
             modifier = Modifier.size(28.dp).clickable { onYearChange(1) },
         )
@@ -452,9 +466,9 @@ private fun ChartCard(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
-            MetricPill(label = "시간", value = formatTime(totalTime))
-            MetricPill(label = "페이스", value = formatPace(avgPace))
-            MetricPill(label = "획득", value = "+$totalCoins", showCreditIcon = true)
+            MetricPill(label = stringResource(R.string.stats_metric_time), value = formatTime(totalTime))
+            MetricPill(label = stringResource(R.string.stats_metric_pace), value = formatPace(avgPace))
+            MetricPill(label = stringResource(R.string.stats_metric_earned), value = "+$totalCoins", showCreditIcon = true)
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -566,14 +580,14 @@ private fun RecentActivitySection(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
-            text = "최근 활동",
+            text = stringResource(R.string.stats_recent_activity),
             style = AppTextStyle.titleSm.copy(fontWeight = FontWeight.Bold),
             color = ColorTextPrimary,
         )
 
         if (records.isEmpty()) {
             Text(
-                text = "최근활동이 없습니다.",
+                text = stringResource(R.string.stats_no_activity),
                 style = AppTextStyle.bodyMd,
                 color = ColorTextSecondary,
             )
@@ -723,7 +737,7 @@ private fun RecentActivityCard(
         // 화살표
         Icon(
             Icons.Filled.ChevronRight,
-            contentDescription = "상세 보기",
+            contentDescription = stringResource(R.string.stats_detail_view),
             tint = ColorTextSecondary,
             modifier = Modifier.size(20.dp),
         )
@@ -849,14 +863,20 @@ private fun computeBarFilteredRecords(
     }
 }
 
-private fun getBarLabels(period: Int, monthlyYear: Int, monthlyMonth: Int): List<String> {
+private fun getBarLabels(
+    period: Int,
+    monthlyYear: Int,
+    monthlyMonth: Int,
+    dayLabels: List<String>,
+    weekSuffix: String,
+): List<String> {
     return when (period) {
-        0 -> dayLabels // 주간: 월~일
-        1 -> { // 월간: 1주~N주
+        0 -> dayLabels
+        1 -> {
             val maxWeeks = getWeeksInMonth(monthlyYear, monthlyMonth)
-            (1..maxWeeks).map { "${it}주" }
+            (1..maxWeeks).map { "$it$weekSuffix" }
         }
-        2 -> (1..12).map { "$it" } // 년간: 숫자만
+        2 -> (1..12).map { "$it" }
         else -> emptyList()
     }
 }

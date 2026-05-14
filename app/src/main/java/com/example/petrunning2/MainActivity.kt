@@ -24,6 +24,7 @@ import com.example.petrunning2.data.RouteHolder
 import com.example.petrunning2.ui.decoration.DecorationScreen
 import com.example.petrunning2.ui.home.HomeScreen
 import com.example.petrunning2.ui.login.LoginScreen
+import com.example.petrunning2.ui.splash.SplashScreen
 import com.example.petrunning2.ui.profile.ProfileScreen
 import com.example.petrunning2.ui.result.ResultScreen
 import com.example.petrunning2.ui.running.CountdownScreen
@@ -54,6 +55,18 @@ private fun AppNavigation() {
     val startDestination = if (isLoggedIn) "home" else "login"
 
     NavHost(navController = navController, startDestination = startDestination) {
+
+        // ── 스플래시 (비활성화 중) ──
+//        composable("splash") {
+//            SplashScreen(
+//                onFinished = {
+//                    val dest = if (isLoggedIn) "home" else "login"
+//                    navController.navigate(dest) {
+//                        popUpTo("splash") { inclusive = true }
+//                    }
+//                },
+//            )
+//        }
 
         // ── 로그인 ──
         composable("login") {

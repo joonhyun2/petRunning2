@@ -1,12 +1,18 @@
 package com.example.petrunning2.ui.running
 
+import android.content.Context
 import android.location.Location
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.petrunning2.R
 import com.example.petrunning2.analytics.AnalyticsHelper
 import com.example.petrunning2.data.location.LocationDataSource
+import com.example.petrunning2.data.repository.CatalogRepository
 import com.example.petrunning2.data.repository.ItemRepository
+import com.example.petrunning2.ui.decoration.CLOTHES_CATALOG
+import com.example.petrunning2.ui.decoration.ClothItem
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -17,6 +23,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -30,8 +37,23 @@ data class FloatingReward(val id: Long, val text: String, val isCredit: Boolean)
 class RunningViewModel @Inject constructor(
     private val locationDataSource: LocationDataSource,
     private val analyticsHelper: AnalyticsHelper,
+    @ApplicationContext private val context: Context,
     itemRepository: ItemRepository,
+    catalogRepository: CatalogRepository,
 ) : ViewModel() {
+
+    private val localItemIds = CLOTHES_CATALOG.map { it.id }.toSet()
+
+    val catalog: StateFlow<List<ClothItem>> = catalogRepository.items
+        .map { dbItems ->
+            val newItems = dbItems.filter { it.id !in localItemIds }
+            CLOTHES_CATALOG + newItems
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = CLOTHES_CATALOG,
+        )
 
     private val _uiState = MutableStateFlow(RunningUiState())
     val uiState: StateFlow<RunningUiState> = _uiState.asStateFlow()
@@ -178,7 +200,7 @@ class RunningViewModel @Inject constructor(
                                     _rewardEvents.tryEmit(
                                         FloatingReward(
                                             id = ++rewardIdCounter,
-                                            text = if (isCredit) "+1 크레딧" else "+1 경험치",
+                                            text = if (isCredit) context.getString(R.string.running_reward_credit) else context.getString(R.string.running_reward_xp),
                                             isCredit = isCredit,
                                         )
                                     )

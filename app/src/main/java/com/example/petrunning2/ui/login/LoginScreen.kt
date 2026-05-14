@@ -16,16 +16,19 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.petrunning2.R
 import com.example.petrunning2.ui.components.AppLogo
 import com.example.petrunning2.ui.theme.AppTextStyle
@@ -40,7 +43,12 @@ import com.example.petrunning2.ui.theme.PetRunning2Theme
 @Composable
 fun LoginScreen(
     onGuestLogin: () -> Unit,
+    viewModel: LoginViewModel = hiltViewModel(),
 ) {
+    LaunchedEffect(Unit) {
+        viewModel.onScreenEntered()
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -69,7 +77,7 @@ fun LoginScreen(
 
             // 서브 텍스트
             Text(
-                text = "달리면서 캐릭터를 키워보세요",
+                text = stringResource(R.string.login_subtitle),
                 style = AppTextStyle.bodyMd,
                 color = ColorTextSecondary,
             )
@@ -95,7 +103,10 @@ fun LoginScreen(
 
             // 게스트 로그인 버튼
             Button(
-                onClick = onGuestLogin,
+                onClick = {
+                    viewModel.onGuestLoginTapped()
+                    onGuestLogin()
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(62.dp)
@@ -111,7 +122,7 @@ fun LoginScreen(
                 ),
             ) {
                 Text(
-                    text = "게스트로 시작하기",
+                    text = stringResource(R.string.login_guest_button),
                     style = AppTextStyle.titleSm.copy(fontWeight = FontWeight.Bold),
                 )
             }

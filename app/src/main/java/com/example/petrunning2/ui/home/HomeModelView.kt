@@ -7,6 +7,8 @@ import com.example.petrunning2.analytics.AnalyticsHelper
 import com.example.petrunning2.data.repository.CatalogRepository
 import com.example.petrunning2.data.repository.DogRepository
 import com.example.petrunning2.data.repository.ItemRepository
+import com.example.petrunning2.ui.decoration.CLOTHES_CATALOG
+import com.example.petrunning2.ui.decoration.ClothItem
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -33,6 +35,8 @@ class HomeViewModel @Inject constructor(
     fun logStartButtonTapped() = analyticsHelper.logHomeStartButtonTapped()
     fun logTabDwellTime(seconds: Long) = analyticsHelper.logTabDwellTime("home", seconds)
 
+    private val localItemIds = CLOTHES_CATALOG.map { it.id }.toSet()
+
     init {
         viewModelScope.launch { catalogRepository.fetchCharacterSpriteUrl() }
     }
@@ -48,7 +52,7 @@ class HomeViewModel @Inject constructor(
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = Dog(name = "Pix", level = 1, currentXp = 0, maxXp = 100, credit = 0)
+            initialValue = Dog(name = "Runi", level = 1, currentXp = 0, maxXp = 100, credit = 0)
         )
 
     val equippedItemId: StateFlow<Int?> = itemRepository.equippedItemId
@@ -63,6 +67,17 @@ class HomeViewModel @Inject constructor(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList(),
+        )
+
+    val catalog: StateFlow<List<ClothItem>> = catalogRepository.items
+        .map { dbItems ->
+            val newItems = dbItems.filter { it.id !in localItemIds }
+            CLOTHES_CATALOG + newItems
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = CLOTHES_CATALOG,
         )
 
     val todayStats: StateFlow<TodayStats> = dogRepository.getTodayRecords()

@@ -51,6 +51,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -75,6 +76,7 @@ import com.example.petrunning2.ui.theme.ColorSurface
 import com.example.petrunning2.ui.theme.ColorSurfaceSoft
 import com.example.petrunning2.ui.theme.ColorTextDisabled
 import com.example.petrunning2.ui.theme.ColorTextPrimary
+import com.example.petrunning2.ui.theme.ColorTextSecondary
 import coil.compose.AsyncImage
 import com.example.petrunning2.ui.decoration.ClothItem as ClothItemData
 import com.example.petrunning2.ui.theme.PetRunning2Theme
@@ -87,7 +89,7 @@ data class DecorationItem(
     val imageUrl: String = "",
 )
 
-private val tabs = listOf("얼굴", "헤어", "옷", "테마")
+// tabs 리스트는 DecorationTabs Composable 내부에서 stringResource로 생성
 
 @Composable
 fun DecorationScreen(
@@ -120,8 +122,8 @@ fun DecorationScreen(
         catalog.find { it.id == id }?.category == currentTabCategory
     }
 
-    // 탭 전환 시 해당 탭의 장착 아이템으로 자동 동기화
-    LaunchedEffect(selectedTab, equippedItemIds) {
+    // 탭 전환 시에만 해당 탭의 장착 아이템으로 자동 동기화
+    LaunchedEffect(selectedTab) {
         selectedItemId = equippedInCurrentTab ?: -1
     }
     var showPurchaseDialog by remember { mutableStateOf(false) }
@@ -158,13 +160,9 @@ fun DecorationScreen(
     val showCancelButton = selectedItemId > 0 && equippedItemIds.contains(selectedItemId) && !showPurchaseButton
 
     // 프리뷰 로직:
-    // - 락된 아이템 선택 → 해당 아이템 미리보기 (구매 전 미리보기)
-    // - 구매한 아이템(락 안됨) 선택 → 장착된 아이템 표시 (선택만 한 것, 아직 적용 안 됨)
+    // - 아이템 선택 시 → 해당 아이템 미리보기 (잠금/소유 무관)
     // - 아무것도 선택 안 함 → 장착된 아이템 표시
-    val previewItemId: Int? = when {
-        selectedItemId > 0 && selectedItem?.isLocked == true -> selectedItemId  // 락 아이템 미리보기
-        else -> equippedInCurrentTab  // 장착된 아이템 표시
-    }
+    val previewItemId: Int? = if (selectedItemId > 0) selectedItemId else equippedInCurrentTab
 
     // 캐릭터 프리뷰: 현재 탭 카테고리는 previewItemId로, 나머지 카테고리는 equippedItemIds 그대로
     val previewItemIds = equippedItemIds.filter { id ->
@@ -232,7 +230,7 @@ fun DecorationScreen(
                     selectedItemId = id
                     val item = catalog.find { it.id == id }
                     val isLocked = currentItems.find { it.id == id }?.isLocked ?: true
-                    if (item != null) viewModel.logItemViewed(id, item.name, isLocked)
+                    if (item != null) viewModel.logItemViewed(id, item.localizedName(), isLocked)
                 },
                 onReset = {
                     selectedItemId = -1
@@ -269,18 +267,19 @@ fun DecorationScreen(
     // ── Frame 1500: 구매 확인 다이얼로그 ──
     if (showPurchaseDialog && selectedClothItem != null) {
         PurchaseConfirmDialog(
-            itemName = selectedClothItem.name,
+            itemName = selectedClothItem.localizedName(),
+            itemPrice = selectedClothItem.price,
             itemDrawableRes = selectedClothItem.drawableRes,
             itemImageUrl = selectedClothItem.imageUrl,
             onConfirm = {
                 showPurchaseDialog = false
-                viewModel.purchaseItem(selectedClothItem.id, selectedClothItem.price) { success ->
+                viewModel.purchaseItem(selectedClothItem.id, selectedClothItem.price, selectedClothItem.category) { success ->
                     if (success) showSuccessDialog = true
                     else showInsufficientDialog = true
                 }
             },
             onDismiss = {
-                viewModel.logPurchaseCancelled(selectedClothItem?.id ?: -1, selectedClothItem?.name ?: "unknown")
+                viewModel.logPurchaseCancelled(selectedClothItem?.id ?: -1, selectedClothItem?.localizedName() ?: "unknown")
                 showPurchaseDialog = false
             },
         )
@@ -293,8 +292,7 @@ fun DecorationScreen(
             itemImageUrl = selectedClothItem.imageUrl,
             onConfirm = {
                 showSuccessDialog = false
-                // 탭 유지, 선택만 해제
-                selectedItemId = -1
+                // selectedItemId 유지 → 구매한 아이템이 선택/장착 상태로 취소 버튼 표시
             },
         )
     }
@@ -427,6 +425,12 @@ private fun DecorationTabs(
     selectedTab: Int,
     onTabSelected: (Int) -> Unit,
 ) {
+    val tabs = listOf(
+        stringResource(R.string.decoration_tab_face),
+        stringResource(R.string.decoration_tab_hair),
+        stringResource(R.string.decoration_tab_cloth),
+        stringResource(R.string.decoration_tab_theme),
+    )
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -649,9 +653,9 @@ private fun DecorationActions(
         else -> onApply
     }
     val buttonText = when {
-        showCancelButton -> "취소"
-        showPurchaseButton -> "구매"
-        else -> "적용"
+        showCancelButton -> stringResource(R.string.decoration_cancel)
+        showPurchaseButton -> stringResource(R.string.decoration_purchase)
+        else -> stringResource(R.string.decoration_apply)
     }
 
     Row(
@@ -674,7 +678,7 @@ private fun DecorationActions(
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
                 )
-                Text(text = "초기화", style = AppTextStyle.bodyMd.copy(fontWeight = FontWeight.Bold), maxLines = 1)
+                Text(text = stringResource(R.string.decoration_reset), style = AppTextStyle.bodyMd.copy(fontWeight = FontWeight.Bold), maxLines = 1)
             }
         }
 
@@ -707,6 +711,7 @@ private fun DecorationActions(
 @Composable
 private fun PurchaseConfirmDialog(
     itemName: String,
+    itemPrice: Int,
     itemDrawableRes: Int,
     itemImageUrl: String = "",
     onConfirm: () -> Unit,
@@ -722,38 +727,44 @@ private fun PurchaseConfirmDialog(
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(24.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Text(
-                    text = "${itemName}을 구매하시겠습니까?",
+                    text = itemName,
                     style = AppTextStyle.titleMd,
                     color = ColorTextPrimary,
                     textAlign = TextAlign.Center,
                 )
-                if (itemImageUrl.isNotBlank()) {
-                    AsyncImage(
+                Text(
+                    text = stringResource(R.string.decoration_purchase_price, itemPrice),
+                    style = AppTextStyle.bodyMd,
+                    color = ColorTextSecondary,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                when {
+                    itemImageUrl.isNotBlank() -> AsyncImage(
                         model = itemImageUrl,
                         contentDescription = null,
                         modifier = Modifier.size(150.dp),
                         contentScale = ContentScale.Fit,
                     )
-                } else {
-                    Image(
+                    itemDrawableRes != 0 -> Image(
                         painter = painterResource(itemDrawableRes),
                         contentDescription = null,
                         modifier = Modifier.size(150.dp),
                         contentScale = ContentScale.Fit,
                     )
                 }
+                Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-
                     Button(
                         onClick = onDismiss,
                         modifier = Modifier.size(width = 108.dp, height = 47.dp),
                         shape = RoundedCornerShape(50),
-                        colors = ButtonDefaults.buttonColors(containerColor = ColorPrimaryChart),
+                        colors = ButtonDefaults.buttonColors(containerColor = ColorBorderSubtle),
                     ) {
-                        Text("아니오", style = AppTextStyle.titleMd, color = Color.White)
+                        Text(stringResource(R.string.decoration_purchase_no), style = AppTextStyle.titleMd, color = ColorTextPrimary)
                     }
                     Button(
                         onClick = onConfirm,
@@ -761,9 +772,8 @@ private fun PurchaseConfirmDialog(
                         shape = RoundedCornerShape(50),
                         colors = ButtonDefaults.buttonColors(containerColor = ColorPrimaryChart),
                     ) {
-                        Text("예", style = AppTextStyle.titleMd, color = Color.White)
+                        Text(stringResource(R.string.decoration_purchase_yes), style = AppTextStyle.titleMd, color = Color.White)
                     }
-
                 }
             }
         }
@@ -794,20 +804,19 @@ private fun PurchaseSuccessDialog(
                 verticalArrangement = Arrangement.spacedBy(24.dp),
             ) {
                 Text(
-                    text = "구매를 완료하였습니다!",
+                    text = stringResource(R.string.decoration_purchase_success),
                     style = AppTextStyle.titleMd,
                     color = ColorTextPrimary,
                     textAlign = TextAlign.Center,
                 )
-                if (itemImageUrl.isNotBlank()) {
-                    AsyncImage(
+                when {
+                    itemImageUrl.isNotBlank() -> AsyncImage(
                         model = itemImageUrl,
                         contentDescription = null,
                         modifier = Modifier.size(150.dp),
                         contentScale = ContentScale.Fit,
                     )
-                } else {
-                    Image(
+                    itemDrawableRes != 0 -> Image(
                         painter = painterResource(itemDrawableRes),
                         contentDescription = null,
                         modifier = Modifier.size(150.dp),
@@ -820,7 +829,7 @@ private fun PurchaseSuccessDialog(
                     shape = RoundedCornerShape(50),
                     colors = ButtonDefaults.buttonColors(containerColor = ColorPrimaryChart),
                 ) {
-                    Text("확인", style = AppTextStyle.titleMd, color = Color.White)
+                    Text(stringResource(R.string.decoration_purchase_confirm_button), style = AppTextStyle.titleMd, color = Color.White)
                 }
             }
         }
@@ -846,13 +855,13 @@ private fun InsufficientCreditDialog(
                 verticalArrangement = Arrangement.spacedBy(24.dp),
             ) {
                 Text(
-                    text = "크레딧이 부족해요!",
+                    text = stringResource(R.string.decoration_insufficient_credit),
                     style = AppTextStyle.titleMd,
                     color = ColorTextPrimary,
                     textAlign = TextAlign.Center,
                 )
                 Text(
-                    text = "달리기를 해서 크레딧을 모아보세요",
+                    text = stringResource(R.string.decoration_insufficient_credit_hint),
                     style = AppTextStyle.bodyMd,
                     color = ColorTextPrimary.copy(alpha = 0.6f),
                     textAlign = TextAlign.Center,
@@ -863,7 +872,7 @@ private fun InsufficientCreditDialog(
                     shape = RoundedCornerShape(50),
                     colors = ButtonDefaults.buttonColors(containerColor = ColorPrimaryChart),
                 ) {
-                    Text("확인", style = AppTextStyle.titleMd, color = Color.White)
+                    Text(stringResource(R.string.decoration_insufficient_confirm), style = AppTextStyle.titleMd, color = Color.White)
                 }
             }
         }

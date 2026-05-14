@@ -18,13 +18,16 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import coil.ImageLoader
+import coil.imageLoader
 import coil.request.ImageRequest
 import coil.request.SuccessResult
 import com.example.petrunning2.R
 import com.example.petrunning2.ui.decoration.ClothItem
 import com.example.petrunning2.ui.decoration.CLOTHES_CATALOG
 import com.example.petrunning2.ui.decoration.ItemCategory
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 
 // pet_idle.png 가 4프레임 2x2 그리드 스프라이트 시트
@@ -49,9 +52,9 @@ fun PetCharacter(
 
     val context = LocalContext.current
     val density = LocalDensity.current
-    val imageLoader = remember { ImageLoader(context) }
+    // AsyncImage와 동일한 싱글턴 ImageLoader 공유 → 캐시 재사용
+    val imageLoader = context.imageLoader
 
-    // 로컬 리소스를 기본값으로 사용, URL 로드 성공 시 교체
     val localSprite = remember {
         BitmapFactory.decodeResource(context.resources, R.drawable.pet_idle)
     }
@@ -74,28 +77,32 @@ fun PetCharacter(
         }
     }
 
-    // 장착 아이템 비트맵 로드
     var itemBitmaps by remember { mutableStateOf<List<Pair<ClothItem, Bitmap>>>(emptyList()) }
 
-    LaunchedEffect(allEquippedIds, catalog) {
-        val loaded = equippedItems.mapNotNull { item ->
-            val bitmap = when {
-                item.imageUrl.isNotBlank() -> {
-                    try {
-                        val request = ImageRequest.Builder(context)
-                            .data(item.imageUrl)
-                            .allowHardware(false)
-                            .build()
-                        val result = imageLoader.execute(request)
-                        if (result is SuccessResult) {
-                            (result.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
-                        } else null
-                    } catch (_: Exception) { null }
+    val loadKey = equippedItems.map { it.id to it.imageUrl }
+    LaunchedEffect(loadKey) {
+        val loaded = coroutineScope {
+            equippedItems.map { item ->
+                async {
+                    val bitmap = when {
+                        item.imageUrl.isNotBlank() -> {
+                            try {
+                                val request = ImageRequest.Builder(context)
+                                    .data(item.imageUrl)
+                                    .allowHardware(false)
+                                    .build()
+                                val result = imageLoader.execute(request)
+                                if (result is SuccessResult) {
+                                    (result.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
+                                } else null
+                            } catch (_: Exception) { null }
+                        }
+                        item.drawableRes != 0 -> BitmapFactory.decodeResource(context.resources, item.drawableRes)
+                        else -> null
+                    }
+                    bitmap?.let { item to it }
                 }
-                item.drawableRes != 0 -> BitmapFactory.decodeResource(context.resources, item.drawableRes)
-                else -> null
-            }
-            bitmap?.let { item to it }
+            }.awaitAll().filterNotNull()
         }
         itemBitmaps = loaded
     }

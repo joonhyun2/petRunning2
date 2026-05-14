@@ -22,7 +22,7 @@ class HistoryViewModel @Inject constructor(
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = Dog(name = "Pix", level = 1, currentXp = 0, maxXp = 100, credit = 0)
+            initialValue = Dog(name = "Runi", level = 1, currentXp = 0, maxXp = 100, credit = 0)
         )
 
     val records: StateFlow<List<RunRecordEntity>> = dogRepository.getAllRecords()

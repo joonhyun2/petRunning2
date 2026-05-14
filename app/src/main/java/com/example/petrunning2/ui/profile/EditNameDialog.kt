@@ -25,9 +25,11 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.example.petrunning2.R
 import com.example.petrunning2.ui.theme.AppTextStyle
 import com.example.petrunning2.ui.theme.ColorBg
 import com.example.petrunning2.ui.theme.ColorBorder
@@ -62,7 +64,7 @@ fun EditNameDialog(
         ) {
             // 제목
             Text(
-                text = "이름 수정",
+                text = stringResource(R.string.edit_name_title),
                 style = AppTextStyle.titleSm,
                 color = ColorTextPrimary,
             )
@@ -86,7 +88,7 @@ fun EditNameDialog(
                     Box {
                         if (name.isEmpty()) {
                             Text(
-                                text = "이름을 입력해주세요",
+                                text = stringResource(R.string.edit_name_placeholder),
                                 style = AppTextStyle.bodyLg,
                                 color = ColorTextDisabled,
                             )
@@ -109,7 +111,7 @@ fun EditNameDialog(
                     modifier = Modifier.weight(1f),
                 ) {
                     Text(
-                        text = "취소",
+                        text = stringResource(R.string.edit_name_cancel),
                         style = AppTextStyle.bodyLg.copy(fontWeight = FontWeight.Medium),
                         color = ColorTextSecondary,
                     )
@@ -124,7 +126,7 @@ fun EditNameDialog(
                     modifier = Modifier.weight(1f),
                 ) {
                     Text(
-                        text = "확인",
+                        text = stringResource(R.string.edit_name_confirm),
                         style = AppTextStyle.bodyLg.copy(fontWeight = FontWeight.Medium),
                         color = if (canConfirm) ColorPrimary else ColorTextDisabled,
                     )

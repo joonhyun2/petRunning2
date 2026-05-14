@@ -26,7 +26,7 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun CountdownScreen(onCountdownFinished: () -> Unit) {
-    var count by remember { mutableIntStateOf(1) }
+    var count by remember { mutableIntStateOf(3) }
     val scale = remember { Animatable(0.4f) }
     val alpha = remember { Animatable(0f) }
 
